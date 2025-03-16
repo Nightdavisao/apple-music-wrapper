@@ -1,0 +1,23 @@
+{
+  "name": "am-wrapper",
+  "version": "1.0.0",
+  "description": "",
+  "main": "dist/main.js",
+  "scripts": {
+    "start": "npx tsc && ELECTRON_OZONE_PLATFORM_HINT=wayland electron .",
+    "build": "npx tsc",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "electron": "github:castlabs/electron-releases#v35.0.1+wvcus",
+    "typescript": "^5.8.2"
+  },
+  "dependencies": {
+    "@xhayper/discord-rpc": "^1.2.0",
+    "dbus-next": "^0.10.2"
+  }
+}
