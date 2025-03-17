@@ -1,18 +1,10 @@
-const targetNode = document.querySelector("#navigation");
-
-const config = { childList: true, subtree: true };
-
-const callback = function(mutationsList, observer) {
-    for (let mutation of mutationsList) {
-        if (mutation.type === 'childList') {
-            const element = document.querySelector("#navigation > div.navigation__native-cta");
-            if (element) {
-                element.style.display = "none";
-            }
+(function() {
+    const style = document.createElement('style');
+    style.type = 'text/css';
+    style.innerHTML = `
+        #navigation > div.navigation__native-cta {
+            display: none;
         }
-    }
-};
-
-const observer = new MutationObserver(callback);
-
-observer.observe(targetNode, config);
+    `;
+    document.head.appendChild(style);
+})();

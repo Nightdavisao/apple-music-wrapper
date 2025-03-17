@@ -10,7 +10,7 @@ interface AMWrapper {
 contextBridge.exposeInMainWorld('AMWrapper', {
     ipcRenderer: {
         send: (channel: string, data: any) => {
-            ipcRenderer.send(channel, JSON.stringify(data))
+            ipcRenderer.send(channel, data)
         },
         on: (channel: string, func: (...args: any[]) => void) => {
             ipcRenderer.on(channel, func)
