@@ -79,7 +79,6 @@ async function setupMpris() {
                 'xesam:trackNumber': data.trackNumber,
                 'xesam:discNumber': data.discNumber,
             })
-            mpris.setPlaybackStatus(PlaybackStatus.Playing)
         }))
 
         ipcMain.on('playbackState', asyncWrapper(async (event: IpcMainEvent, data: any) => {
