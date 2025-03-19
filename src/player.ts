@@ -82,7 +82,10 @@ export class Player extends EventEmitter {
             })
         })
 
-        this.on('nowPlaying', (data: TrackMetadata) => this.metadata = data)
+        this.on('nowPlaying', (data: TrackMetadata) => {
+            this.metadata = data
+            this.playbackTime = 0
+        })
         this.on('playbackState', (data: { state: MKPlaybackState }) => this.playbackState = data.state)
         this.on('playbackTime', (data: { position: number }) => this.playbackTime = data.position)
         this.on('shuffle', (data: { mode: boolean }) => this.shuffleMode = data.mode)

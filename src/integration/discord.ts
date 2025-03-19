@@ -7,14 +7,17 @@ import { secToMicro, secToMillis } from "../utils"
 export class DiscordIntegration {
     player: Player
     client: Client
+    wasPaused: boolean
     constructor(player: Player) {
         this.player = player
         this.client = new Client({ clientId: '1350945271827136522' })
+        this.wasPaused = false
     }
 
     load() {
         this.client.on('ready', () => {
             console.log('Discord RPC connected')
+            
             //this.player.on('nowPlaying', (metadata: TrackMetadata) => this.setActivity(metadata))
             this.player.on('playbackState', ({ state }) => {
                 switch (state) {
@@ -24,8 +27,15 @@ export class DiscordIntegration {
                     case MKPlaybackState.Stopped:
                     case MKPlaybackState.Paused:
                     default:
+                        this.wasPaused = true
                         this.client.user?.clearActivity()
                         break
+                }
+            })
+            this.player.on('playbackTime', () => {
+                if (this.player.metadata && this.wasPaused) {
+                    this.setActivity(this.player.metadata)
+                    this.wasPaused = false
                 }
             })
         })
@@ -41,8 +51,8 @@ export class DiscordIntegration {
             state: `by ${metadata['artistName']}`,
             largeImageKey: metadata.artwork.url.replace('{w}', metadata.artwork.width.toString()).replace('{h}', metadata.artwork.height.toString()),
             largeImageText: metadata['albumName'],
-            smallImageKey: 'play',
-            smallImageText: 'fweqfwefqw',
+            //smallImageKey: 'play',
+            //smallImageText: 'fweqfwefqw',
             startTimestamp: Date.now() - secToMillis(this.player.playbackTime),
             endTimestamp: Date.now() + (metadata.durationInMillis - secToMillis(this.player.playbackTime)),
             instance: false
@@ -50,6 +60,6 @@ export class DiscordIntegration {
     }
 
     unload() {
-        console.log('Discord unloaded')
+        throw new Error('Method not implemented')
     }
 }
