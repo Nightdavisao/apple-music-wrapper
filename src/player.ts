@@ -84,7 +84,7 @@ export class Player extends EventEmitter {
 
         this.on('nowPlaying', (data: TrackMetadata) => this.metadata = data)
         this.on('playbackState', (data: { state: MKPlaybackState }) => this.playbackState = data.state)
-        this.on('playbackTime', (data: { time: number }) => this.playbackTime = data.time)
+        this.on('playbackTime', (data: { position: number }) => this.playbackTime = data.position)
         this.on('shuffle', (data: { mode: boolean }) => this.shuffleMode = data.mode)
         this.on('repeat', (data: { mode: MKRepeatMode }) => this.repeatMode = data.mode)
 

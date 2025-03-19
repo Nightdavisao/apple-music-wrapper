@@ -23,3 +23,5 @@ export const PLAYBACK_STATES = {
 
 export const secToMicro = (seconds: number) => Math.round(Number(seconds) * 1e6);
 export const microToSec = (microseconds: number) => Number(microseconds) / 1e6;
+export const secToMillis = (seconds: number) => Math.round(Number(seconds) * 1e3);
+export const millisToSec = (milliseconds: number) => Number(milliseconds) / 1e3;

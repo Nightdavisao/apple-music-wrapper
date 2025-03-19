@@ -1,4 +1,4 @@
-import { app, BrowserWindow, components, Menu, ipcMain, IpcMainEvent, MenuItem } from 'electron';
+import { app, BrowserWindow, components, Menu, ipcMain, IpcMainEvent, MenuItem, Tray, MenuItemConstructorOptions } from 'electron';
 import path from 'path'
 import fs from 'fs'
 import { MPRISService } from './mpris/service'
@@ -9,6 +9,7 @@ import { Player } from './player';
 import { MPRISIntegration } from './integration/mpris';
 import { TrackMetadata } from './@types/interfaces';
 import { MKRepeatMode } from './@types/enums';
+import { DiscordIntegration } from './integration/discord';
 
 let mainWindow: Electron.BrowserWindow;
 
@@ -41,6 +42,8 @@ async function setupRichPresence() {
 }
 
 app.whenReady().then(async () => {
+    let isQuitting = false
+
     await components.whenReady()
     mainWindow = new BrowserWindow({
         width: 800,
@@ -54,7 +57,75 @@ app.whenReady().then(async () => {
 
     const player = new Player(ipcMain, mainWindow.webContents)
     player.addIntegration(new MPRISIntegration(player))
+    player.addIntegration(new DiscordIntegration(player))
     player.initalize()
+
+    const playbackTemplate = () => [
+        {
+            id: 'nowPlaying',
+            label: player.metadata?.name ? `${player.metadata.name} - ${player.metadata.artistName}` : 'No music playing',
+            enabled: false
+        },
+        { type: 'separator' },
+        {
+            label: 'Play/Pause',
+            click: () => {
+                player.playPause()
+            }
+        },
+        {
+            label: 'Next',
+            click: () => {
+                player.next()
+            }
+        },
+        {
+            label: 'Previous',
+            click: () => {
+                player.previous()
+            }
+        },
+        { type: 'separator' },
+        {
+            label: 'Shuffle',
+            type: 'checkbox',
+            checked: player.shuffleMode,
+            click: (menuItem: MenuItem) => {
+                player.setShuffle(menuItem.checked)
+            }
+        },
+        {
+            label: 'Repeat',
+            submenu: [
+                {
+                    label: 'None',
+                    type: 'radio',
+                    checked: player.repeatMode === MKRepeatMode.None,
+                    click: () => {
+                        player.setRepeat(MKRepeatMode.None)
+                    }
+                },
+                {
+                    label: 'Track',
+                    type: 'radio',
+                    checked: player.repeatMode === MKRepeatMode.One,
+                    click: () => {
+                        player.setRepeat(MKRepeatMode.One)
+                    }
+                },
+                {
+                    label: 'Album/Playlist',
+                    type: 'radio',
+                    checked: player.repeatMode === MKRepeatMode.All,
+                    click: () => {
+                        player.setRepeat(MKRepeatMode.All)
+                    }
+                }
+            ]
+        }
+    ]
+
+
     const createMenuTemplate = () => [
         {
             id: 'file',
@@ -87,8 +158,15 @@ app.whenReady().then(async () => {
                 },
                 { type: 'separator' },
                 {
-                    label: 'Exit',
+                    label: 'Minimize to tray',
                     click: () => {
+                        mainWindow.hide()
+                    }
+                },
+                {
+                    label: 'Quit',
+                    click: () => {
+                        isQuitting = true
                         app.quit()
                     }
                 }
@@ -97,83 +175,50 @@ app.whenReady().then(async () => {
         {
             id: 'playback',
             label: 'Playback',
-            submenu: [
-                {
-                    id: 'nowPlaying',
-                    label: player.metadata?.name ? `${player.metadata.name} - ${player.metadata.artistName}` : 'No music playing',
-                    enabled: false
-                },
-                { type: 'separator' },
-                {
-                    label: 'Play/Pause',
-                    click: () => {
-                        player.playPause()
-                    }
-                },
-                {
-                    label: 'Next',
-                    click: () => {
-                        player.next()
-                    }
-                },
-                {
-                    label: 'Previous',
-                    click: () => {
-                        player.previous()
-                    }
-                },
-                { type: 'separator' },
-                {
-                    label: 'Shuffle',
-                    type: 'checkbox',
-                    checked: player.shuffleMode,
-                    click: (menuItem: MenuItem) => {
-                        player.setShuffle(menuItem.checked)
-                    }
-                },
-                {
-                    label: 'Repeat',
-                    submenu: [
-                        {
-                            label: 'None',
-                            type: 'radio',
-                            checked: player.repeatMode === MKRepeatMode.None,
-                            click: () => {
-                                player.setRepeat(MKRepeatMode.None)
-                            }
-                        },
-                        {
-                            label: 'Track',
-                            type: 'radio',
-                            checked: player.repeatMode === MKRepeatMode.One,
-                            click: () => {
-                                player.setRepeat(MKRepeatMode.One)
-                            }
-                        },
-                        {
-                            label: 'Album/Playlist',
-                            type: 'radio',
-                            checked: player.repeatMode === MKRepeatMode.All,
-                            click: () => {
-                                player.setRepeat(MKRepeatMode.All)
-                            }
-                        }
-                    ]
-                }
-            ]
+            submenu: playbackTemplate()
         }
     ] as Electron.MenuItemConstructorOptions[]
 
-    const buildMenu = () => {
+    const buildMainWindowMenu = () => {
         const menu = Menu.buildFromTemplate(createMenuTemplate())
         Menu.setApplicationMenu(menu)
     }
 
-    buildMenu()
+    const tray = new Tray(path.join(path.resolve(), 'am-icon.png'))
+    tray.setToolTip('Apple Music')
+    //tray.on('click', () => mainWindow.show())
+    
+    const buildTrayMenu = () => {
+        const menu = Menu.buildFromTemplate([
+            ...playbackTemplate() as MenuItemConstructorOptions[],
+            { type: 'separator' },
+            {
+                label: 'Show',
+                click: () => {
+                    mainWindow.show()
+                }
+            },
+            {
+                label: 'Quit',
+                click: () => {
+                    isQuitting = true
+                    app.quit()
+                }
+            }
+        ])
+        tray.setContextMenu(menu)
+    }
 
-    player.on('nowPlaying', (data: TrackMetadata) => buildMenu())
-    player.on('shuffle', () => buildMenu())
-    player.on('repeat', () => buildMenu())
+    const buildMenus = () => {
+        buildMainWindowMenu()
+        buildTrayMenu()
+    }
+
+    buildMenus()
+
+    player.on('nowPlaying', (data: TrackMetadata) => buildMenus())
+    player.on('shuffle', () => buildMenus())
+    player.on('repeat', () => buildMenus())
 
     process.on('SIGINT', () => process.exit(0))
 
@@ -181,9 +226,27 @@ app.whenReady().then(async () => {
     //await setupMpris()
     //await setupRichPresence()
 
+    mainWindow.on('close', (event) => {
+        if (!isQuitting) {
+            event.preventDefault()
+            mainWindow.hide()
+            return false
+        } else {
+            mainWindow.destroy()
+            return true
+        }
+    })
+
     // setup hotkey for opening devtools
     mainWindow.webContents.on('before-input-event', (event, input) => {
-        if (input.key.toLowerCase() === 'f12') {
+        if (input.alt && input.key === 'ArrowLeft') {
+            mainWindow.webContents.navigationHistory.goBack()
+        }
+        if (input.alt && input.key === 'ArrowRight') {
+            mainWindow.webContents.navigationHistory.goForward()
+        }
+
+        if (input.alt && input.control && input.key.toLowerCase() === 'i') {
             mainWindow.webContents.openDevTools();
         }
     })
