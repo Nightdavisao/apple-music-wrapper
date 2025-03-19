@@ -1,10 +1,7 @@
 import { app, BrowserWindow, components, Menu, ipcMain, IpcMainEvent, MenuItem, Tray, MenuItemConstructorOptions } from 'electron';
 import path from 'path'
 import fs from 'fs'
-import { MPRISService } from './mpris/service'
-import { PlaybackStatus } from './mpris/enums';
 import { Client } from '@xhayper/discord-rpc';
-import { microToSec, secToMicro } from './utils';
 import { Player } from './player';
 import { MPRISIntegration } from './integration/mpris';
 import { TrackMetadata } from './@types/interfaces';
@@ -222,10 +219,6 @@ app.whenReady().then(async () => {
 
     process.on('SIGINT', () => process.exit(0))
 
-
-    //await setupMpris()
-    //await setupRichPresence()
-
     mainWindow.on('close', (event) => {
         if (!isQuitting) {
             event.preventDefault()
@@ -237,7 +230,6 @@ app.whenReady().then(async () => {
         }
     })
 
-    // setup hotkey for opening devtools
     mainWindow.webContents.on('before-input-event', (event, input) => {
         if (input.alt && input.key === 'ArrowLeft') {
             mainWindow.webContents.navigationHistory.goBack()
@@ -256,6 +248,6 @@ app.whenReady().then(async () => {
         mainWindow.webContents.executeJavaScript(fs.readFileSync(pathJoin('musicKitHook.js')).toString())
         mainWindow.webContents.executeJavaScript(fs.readFileSync(pathJoin('styleFix.js')).toString())
     })
-    //mainWindow.loadURL('https://bitmovin.com/demos/drm/')
+
     mainWindow.loadURL('https://beta.music.apple.com/br');
 });
