@@ -1,7 +1,7 @@
 import dbus from 'dbus-next'
 import { EventEmitter } from 'events'
 import { MediaPlayer2PlayerInterface, MediaPlayer2Interface } from './interface'
-import { PlaybackStatus } from './enums'
+import { LoopStatus, PlaybackStatus } from './enums'
 
 export class MPRISService extends EventEmitter {
     initalized: boolean
@@ -20,8 +20,13 @@ export class MPRISService extends EventEmitter {
     }
     private async _init() {
         this.bus = dbus.sessionBus()
+        this.interface = new MediaPlayer2Interface(this)
+        this.playerInterface = new MediaPlayer2PlayerInterface(this)
+        this.bus.export('/org/mpris/MediaPlayer2', this.interface)
+        this.bus.export('/org/mpris/MediaPlayer2', this.playerInterface)
+        
         try {
-            const returnCode = await this.bus.requestName(`org.mpris.MediaPlayer2.amwrapper`, dbus.NameFlag.ALLOW_REPLACEMENT)
+            const returnCode = await this.bus.requestName(`org.mpris.MediaPlayer2.amwrapper`, dbus.NameFlag.DO_NOT_QUEUE)
             console.log('Return code:', returnCode)
             if (returnCode != dbus.RequestNameReply.PRIMARY_OWNER) {
                 console.error('Could not acquire D-Bus name')
@@ -29,10 +34,6 @@ export class MPRISService extends EventEmitter {
         } catch(e) {
             console.error('Error acquiring D-Bus name:', e)
         }
-        this.interface = new MediaPlayer2Interface(this)
-        this.playerInterface = new MediaPlayer2PlayerInterface(this)
-        this.bus.export('/org/mpris/MediaPlayer2', this.interface)
-        this.bus.export('/org/mpris/MediaPlayer2', this.playerInterface)
 
         process.on('SIGINT', () => {
             console.log('disconnecting from dbus')
@@ -78,22 +79,28 @@ export class MPRISService extends EventEmitter {
                 console.log('Setting metadata:', newMetadata)
                 this.playerInterface.Metadata = newMetadata;
             } catch (error) {
-                console.error('Error setting metadata:', error)
+                console.error('MPRIS service: Error setting metadata:', error)
             } 
         }
     }
 
-    private shouldWrite() {
-        return this.initalized && this.playerInterface
-    }
-
     setPlaybackStatus(status: PlaybackStatus) {
-        console.log('Setting playback status:', status)
+        console.log('MPRIS service: Setting playback status:', status)
         if (this.initalized && this.playerInterface) this.playerInterface.PlaybackStatus = status
     }
 
     setPosition(position: number) {
-        console.log('Setting position:', position)
+        //console.log('MPRIS service: Setting position:', position)
         if (this.initalized && this.playerInterface) this.playerInterface.Position = position
+    }
+
+    setLoopStatus(status: LoopStatus) {
+        console.log('MPRIS service: Setting loop status:', status)
+        if (this.initalized && this.playerInterface) this.playerInterface.LoopStatus = status
+    }
+
+    setShuffle(shuffle: boolean) {
+        console.log('MPRIS service: Setting shuffle:', shuffle)
+        if (this.initalized && this.playerInterface) this.playerInterface.Shuffle = shuffle
     }
 }

@@ -1,10 +1,14 @@
-import { app, BrowserWindow, components, Menu, ipcMain, IpcMainEvent } from 'electron';
+import { app, BrowserWindow, components, Menu, ipcMain, IpcMainEvent, MenuItem } from 'electron';
 import path from 'path'
 import fs from 'fs'
 import { MPRISService } from './mpris/service'
 import { PlaybackStatus } from './mpris/enums';
 import { Client } from '@xhayper/discord-rpc';
 import { microToSec, secToMicro } from './utils';
+import { Player } from './player';
+import { MPRISIntegration } from './integration/mpris';
+import { TrackMetadata } from './@types/interfaces';
+import { MKRepeatMode } from './@types/enums';
 
 let mainWindow: Electron.BrowserWindow;
 
@@ -36,75 +40,6 @@ async function setupRichPresence() {
     client.login()
 }
 
-async function setupMpris() {
-    function sendIpc(channel: string, data: any = null) {
-        mainWindow.webContents.send(channel, data)
-    }
-    try {
-        const asyncWrapper = (fn: any) => (...args: any[]) => {
-            fn(...args).catch((error: any) => {
-                console.error('Unhandled error:', error)
-            })
-        }
-
-        const mpris = new MPRISService()
-
-        mpris.on('initalized', () => {
-            console.log('MPRIS initalized')
-        })
-
-        mpris.on('playpause', asyncWrapper(async () => sendIpc('playpause')))
-        mpris.on('play', asyncWrapper(async () => sendIpc('playbackState', { state: 'playing' })))
-        mpris.on('pause', asyncWrapper(async () => sendIpc('playbackState', { state: 'paused' })))
-        mpris.on('stop', asyncWrapper(async () => sendIpc('playbackState', { state: 'stopped' })))
-        mpris.on('seek', asyncWrapper(async (progress: number) => sendIpc('playbackTime', { progress: microToSec(progress) })))
-        mpris.on('next', asyncWrapper(async () => sendIpc('nextTrack')))
-        mpris.on('previous', asyncWrapper(async () => sendIpc('previousTrack')))
-
-        ipcMain.on('nowPlaying', asyncWrapper(async (event: IpcMainEvent, data: any) => {
-            console.log('Now Playing:', data)
-
-            if (Object.keys(data).length === 0) {
-                mpris.setMetadata({})
-                mpris.setPlaybackStatus(PlaybackStatus.Stopped)
-                return
-            }
-            mpris.setMetadata({
-                'mpris:trackid': '/org/mpris/MediaPlayer2/Track/1',
-                'mpris:length': data.durationInMillis * 1000,
-                'mpris:artUrl': data.artwork.url.replace('{w}', data.artwork.width).replace('{h}', data.artwork.height),
-                'xesam:title': data.name,
-                'xesam:album': data.albumName,
-                'xesam:artist': [data.artistName],
-                'xesam:trackNumber': data.trackNumber,
-                'xesam:discNumber': data.discNumber,
-            })
-        }))
-
-        ipcMain.on('playbackState', asyncWrapper(async (event: IpcMainEvent, data: any) => {
-            console.log('Playback State:', data)
-            switch (data['state']) {
-                case 'playing':
-                    mpris.setPlaybackStatus(PlaybackStatus.Playing)
-                    break;
-                case 'paused':
-                    mpris.setPlaybackStatus(PlaybackStatus.Paused)
-                    break;
-                case 'stopped':
-                    mpris.setPlaybackStatus(PlaybackStatus.Stopped)
-                    break;
-            }
-        }))
-
-        ipcMain.on('playbackTime', asyncWrapper(async (event: IpcMainEvent, data: any) => {
-            mpris.setPosition(secToMicro(data['position']))
-        }))
-    } catch (e) {
-        console.error('MPRIS Error:', e)
-    }
-}
-
-
 app.whenReady().then(async () => {
     await components.whenReady()
     mainWindow = new BrowserWindow({
@@ -116,28 +51,142 @@ app.whenReady().then(async () => {
             plugins: true
         }
     });
-    const menu = Menu.buildFromTemplate([
+
+    const player = new Player(ipcMain, mainWindow.webContents)
+    player.addIntegration(new MPRISIntegration(player))
+    player.initalize()
+    const createMenuTemplate = () => [
         {
-            label: 'Help',
+            id: 'file',
+            label: 'File',
             submenu: [
                 {
-                    label: 'About',
+                    label: 'Back',
                     click: () => {
-                        console.log('About clicked')
+                        mainWindow.webContents.navigationHistory.goBack()
+                    }
+                },
+                {
+                    label: 'Forward',
+                    click: () => {
+                        mainWindow.webContents.navigationHistory.goForward()
+                    }
+                },
+                { type: 'separator' },
+                {
+                    label: 'Reload',
+                    click: () => {
+                        mainWindow.reload()
+                    }
+                },
+                {
+                    label: 'Toggle DevTools',
+                    click: () => {
+                        mainWindow.webContents.toggleDevTools()
+                    }
+                },
+                { type: 'separator' },
+                {
+                    label: 'Exit',
+                    click: () => {
+                        app.quit()
                     }
                 }
             ]
+        },
+        {
+            id: 'playback',
+            label: 'Playback',
+            submenu: [
+                {
+                    id: 'nowPlaying',
+                    label: player.metadata?.name ? `${player.metadata.name} - ${player.metadata.artistName}` : 'No music playing',
+                    enabled: false
+                },
+                { type: 'separator' },
+                {
+                    label: 'Play/Pause',
+                    click: () => {
+                        player.playPause()
+                    }
+                },
+                {
+                    label: 'Next',
+                    click: () => {
+                        player.next()
+                    }
+                },
+                {
+                    label: 'Previous',
+                    click: () => {
+                        player.previous()
+                    }
+                },
+                { type: 'separator' },
+                {
+                    label: 'Shuffle',
+                    type: 'checkbox',
+                    checked: player.shuffleMode,
+                    click: (menuItem: MenuItem) => {
+                        player.setShuffle(menuItem.checked)
+                    }
+                },
+                {
+                    label: 'Repeat',
+                    submenu: [
+                        {
+                            label: 'None',
+                            type: 'radio',
+                            checked: player.repeatMode === MKRepeatMode.None,
+                            click: () => {
+                                player.setRepeat(MKRepeatMode.None)
+                            }
+                        },
+                        {
+                            label: 'Track',
+                            type: 'radio',
+                            checked: player.repeatMode === MKRepeatMode.One,
+                            click: () => {
+                                player.setRepeat(MKRepeatMode.One)
+                            }
+                        },
+                        {
+                            label: 'Album/Playlist',
+                            type: 'radio',
+                            checked: player.repeatMode === MKRepeatMode.All,
+                            click: () => {
+                                player.setRepeat(MKRepeatMode.All)
+                            }
+                        }
+                    ]
+                }
+            ]
         }
-    ])
-    Menu.setApplicationMenu(menu)
-    process.on('SIGINT', () => process.exit(0))
-    
-    
-    await setupMpris()
-    await setupRichPresence()
+    ] as Electron.MenuItemConstructorOptions[]
 
-    mainWindow.loadURL('https://beta.music.apple.com/br');
-    mainWindow.webContents.openDevTools();
+    const buildMenu = () => {
+        const menu = Menu.buildFromTemplate(createMenuTemplate())
+        Menu.setApplicationMenu(menu)
+    }
+
+    buildMenu()
+
+    player.on('nowPlaying', (data: TrackMetadata) => buildMenu())
+    player.on('shuffle', () => buildMenu())
+    player.on('repeat', () => buildMenu())
+
+    process.on('SIGINT', () => process.exit(0))
+
+
+    //await setupMpris()
+    //await setupRichPresence()
+
+    // setup hotkey for opening devtools
+    mainWindow.webContents.on('before-input-event', (event, input) => {
+        if (input.key.toLowerCase() === 'f12') {
+            mainWindow.webContents.openDevTools();
+        }
+    })
 
     mainWindow.webContents.on('dom-ready', () => {
         const pathJoin = (script: string) => path.join(path.resolve(), 'src', 'userscripts', script)
@@ -145,4 +194,5 @@ app.whenReady().then(async () => {
         mainWindow.webContents.executeJavaScript(fs.readFileSync(pathJoin('styleFix.js')).toString())
     })
     //mainWindow.loadURL('https://bitmovin.com/demos/drm/')
+    mainWindow.loadURL('https://beta.music.apple.com/br');
 });

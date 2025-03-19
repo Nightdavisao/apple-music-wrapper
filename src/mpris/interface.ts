@@ -1,5 +1,6 @@
 import dbus from 'dbus-next'
 import { MPRISService } from "./service"
+import { LoopStatus } from './enums'
 
 export class MediaPlayer2Interface extends dbus.interface.Interface {
     service: MPRISService
@@ -24,8 +25,8 @@ export class MediaPlayer2Interface extends dbus.interface.Interface {
         this._fullscreen = false
         this._canSetFullscreen = false
         this._hasTrackList = false
-        this._identity = 'AMWrapper'
-        this._desktopEntry = 'electron'
+        this._identity = 'Apple Music'
+        this._desktopEntry = 'amwrapper'
         this._supportedUriSchemes = []
         this._supportedMimeTypes = []
 
@@ -183,6 +184,7 @@ export class MediaPlayer2PlayerInterface extends dbus.interface.Interface {
         return this._loopStatus
     }
     set LoopStatus(value: string) {
+        this.service.emit('loop', { state: value })
         MediaPlayer2PlayerInterface.emitPropertiesChanged(this, { LoopStatus: value }, [])
         this._loopStatus = value
     }
@@ -198,6 +200,7 @@ export class MediaPlayer2PlayerInterface extends dbus.interface.Interface {
         return this._shuffle
     }
     set Shuffle(value: boolean) {
+        this.service.emit('shuffle', { state: value })
         MediaPlayer2PlayerInterface.emitPropertiesChanged(this, { Shuffle: value }, [])
         this._shuffle = value
     }

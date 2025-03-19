@@ -34,6 +34,12 @@ document.addEventListener('musickitconfigured', async () => {
     ipcRenderer.on('nextTrack', async (event, data) => instance.skipToNextItem())
     ipcRenderer.on('previousTrack', async (event, data) => instance.skipToPreviousItem())
     ipcRenderer.on('playbackTime', async (event, data) => instance.seekToTime(data.progress))
+    ipcRenderer.on('shuffle', async (event, data) => {
+        instance.shuffleMode = data.mode ? 1 : 0
+    })
+    ipcRenderer.on('repeat', async (event, data) => {
+        instance.repeatMode = MusicKit.PlayerRepeatMode[data['mode']]
+    })
 
     instance.addEventListener('nowPlayingItemDidChange', async data => {
         if (data['item'] && data['item']['attributes']) {
@@ -53,5 +59,15 @@ document.addEventListener('musickitconfigured', async () => {
     instance.addEventListener('playbackStateDidChange', async ({ state }) => {
         const playbackState = MusicKit.PlaybackStates[state]
         ipcRenderer.send('playbackState', { state: playbackState })
+    })
+
+    instance.addEventListener('shuffleModeDidChange', async () => {
+        const mode = instance.shuffleMode === 1
+        ipcRenderer.send('shuffle', { mode })
+    })
+
+    instance.addEventListener('repeatModeDidChange', async () => {
+        const mode = MusicKit.PlayerRepeatMode[instance.repeatMode]
+        ipcRenderer.send('repeat', { mode })
     })
 })
