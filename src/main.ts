@@ -16,28 +16,6 @@ app.commandLine.appendSwitch(
 );
 app.commandLine.appendSwitch('disable-features', 'MediaSessionService');
 
-async function setupRichPresence() {
-    const client = new Client({ clientId: '1350945271827136522' });
-    client.on('ready', () => {
-        console.log('Discord RPC connected')
-        ipcMain.on('nowPlaying', (event: IpcMainEvent, data: any) => {
-            client.user?.setActivity({
-                type: 2,
-                details: data['name'],
-                state: `by ${data['artistName']}`,
-                largeImageKey: data.artwork.url.replace('{w}', data.artwork.width).replace('{h}', data.artwork.height),
-                largeImageText: data['albumName'],
-                smallImageKey: 'play',
-                smallImageText: 'fweqfwefqw',
-                startTimestamp: Date.now(),
-                endTimestamp: Date.now() + data.durationInMillis,
-                instance: false
-            })
-        })
-    })
-    client.login()
-}
-
 app.whenReady().then(async () => {
     let isQuitting = false
 
