@@ -8,16 +8,18 @@ export class DiscordIntegration {
     player: Player
     client: Client
     wasPaused: boolean
+    reconnectTimeout: NodeJS.Timeout | null
     constructor(player: Player) {
         this.player = player
         this.client = new Client({ clientId: '1350945271827136522' })
         this.wasPaused = false
+        this.reconnectTimeout = null
     }
 
-    load() {
+    async load() {
         this.client.on('ready', () => {
-            console.log('Discord RPC connected')
-            
+            console.log('discord-rpc: discord RPC ready')
+
             //this.player.on('nowPlaying', (metadata: TrackMetadata) => this.setActivity(metadata))
             this.player.on('playbackState', ({ state }) => {
                 switch (state) {
@@ -39,11 +41,36 @@ export class DiscordIntegration {
                 }
             })
         })
-        this.client.login()
+        this.client.on('disconnected', () => {
+            console.log('discord-rpc: disconnected from Discord RPC')
+            this.createReconnectInterval()
+        })
+        await this.connect()
+    }
+
+    async connect() {
+        try {
+            console.log('discord-rpc: connecting to Discord RPC')
+            await this.client.login()
+        } catch (error) {
+            console.error('discord-rpc: error connecting to Discord RPC', error)
+            this.createReconnectInterval()
+        }
+    }
+
+    createReconnectInterval(interval: number = 3000) {
+        if (this.reconnectTimeout) clearTimeout(this.reconnectTimeout)
+        this.reconnectTimeout = setTimeout(async () => {
+            console.log('discord-rpc: will try to reconnect every 3 seconds')
+
+            if (!this.client.isConnected) {
+                await this.connect()
+            }
+        }, interval)
     }
 
     setActivity(metadata: TrackMetadata) {
-        console.log('Setting Discord activity')
+        console.log('discord-rpc: setting Discord activity')
         console.log(this.player.playbackTime)
         this.client.user?.setActivity({
             type: 2,

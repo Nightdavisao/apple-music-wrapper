@@ -1,6 +1,6 @@
 export interface PlayerIntegration {
-    load(): void
-    unload(): void
+    load(): Promise<void> | void
+    unload(): Promise<void> | void
 }
 
 export interface Artwork {

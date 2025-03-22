@@ -91,13 +91,20 @@ export class Player extends EventEmitter {
         this.on('shuffle', (data: { mode: boolean }) => this.shuffleMode = data.mode)
         this.on('repeat', (data: { mode: MKRepeatMode }) => this.repeatMode = data.mode)
 
-        this.integrations.forEach(i => i.load())
+        const loadedIntegrations = Promise.all(this.integrations.map(i => i.load()))
+        
+        loadedIntegrations.then(() => {
+            console.log('player: all integrations loaded')
+        }).catch(error => {
+            console.error('player: error loading integrations', error)
+        })
     }
 
     addIntegration(integration: PlayerIntegration) {
         this.integrations.push(integration)
     }
-    removeIntegration(integration: PlayerIntegration) {
+    async removeIntegration(integration: PlayerIntegration) {
+        await integration.unload()
         this.integrations = this.integrations.filter(i => i !== integration)
     }
 }
