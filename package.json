@@ -4,9 +4,14 @@
   "description": "",
   "main": "dist/main.js",
   "scripts": {
+    "preinstall": "npx only-allow pnpm",
     "start": "npx tsc && ELECTRON_OZONE_PLATFORM_HINT=wayland electron .",
     "build": "npx tsc",
     "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "engines": {
+    "npm": "Please use pnpm",
+    "yarn": "Please use pnpm"
   },
   "keywords": [],
   "author": "",
@@ -19,5 +24,11 @@
   "dependencies": {
     "@xhayper/discord-rpc": "^1.2.0",
     "dbus-next": "^0.10.2"
+  },
+  "pnpm": {
+    "ignoredBuiltDependencies": [
+      "electron",
+      "usocket"
+    ]
   }
 }
