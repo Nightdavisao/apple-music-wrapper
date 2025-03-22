@@ -34,3 +34,8 @@ export interface TrackMetadata {
     isrc: string;
     previews: any[]; // Defina um tipo específico se a estrutura dos previews for conhecida
 }
+
+
+export interface AppOptions {
+    [key: string]: any;
+}

@@ -1,12 +1,12 @@
-import { app, BrowserWindow, components, Menu, ipcMain, IpcMainEvent, MenuItem, Tray, MenuItemConstructorOptions } from 'electron';
+import { app, dialog, BrowserWindow, components, Menu, ipcMain, IpcMainEvent, MenuItem, Tray, MenuItemConstructorOptions } from 'electron';
 import path from 'path'
 import fs from 'fs'
-import { Client } from '@xhayper/discord-rpc';
 import { Player } from './player';
 import { MPRISIntegration } from './integration/mpris';
 import { TrackMetadata } from './@types/interfaces';
 import { MKRepeatMode } from './@types/enums';
 import { DiscordIntegration } from './integration/discord';
+import { AppConfig } from './config';
 
 let mainWindow: Electron.BrowserWindow;
 
@@ -30,9 +30,18 @@ app.whenReady().then(async () => {
         }
     });
 
+    const configHelper = new AppConfig(app, {
+        enableDiscordRPC: true,
+        enableMPRIS: true
+    })
+
     const player = new Player(ipcMain, mainWindow.webContents)
-    player.addIntegration(new MPRISIntegration(player))
-    player.addIntegration(new DiscordIntegration(player))
+    if (configHelper.get('enableMPRIS'))
+        player.addIntegration(new MPRISIntegration(player))
+    
+    if (configHelper.get('enableDiscordRPC'))
+        player.addIntegration(new DiscordIntegration(player))
+
     player.initalize()
 
     const playbackTemplate = () => [
@@ -151,6 +160,48 @@ app.whenReady().then(async () => {
             id: 'playback',
             label: 'Playback',
             submenu: playbackTemplate()
+        },
+        {
+            id: 'options',
+            label: 'Options',
+            submenu: [
+                {
+                    label: 'Enable Discord RPC',
+                    type: 'checkbox',
+                    checked: configHelper.get('enableDiscordRPC'),
+                    click: (menuItem: MenuItem) => {
+                        configHelper.set('enableDiscordRPC', menuItem.checked)
+                    }
+                },
+                {
+                    label: 'Enable MPRIS Integration',
+                    type: 'checkbox',
+                    checked: configHelper.get('enableMPRIS'),
+                    click: (menuItem: MenuItem) => {
+                        configHelper.set('enableMPRIS', menuItem.checked)
+                    }
+                }
+            ]
+        },
+        {
+            id: 'help',
+            label: 'Help',
+            submenu: [
+                {
+                    label: 'About',
+                    click: async () => {
+                        dialog.showMessageBox({
+                            title: 'About',
+                            message: 'am-wrapper',
+                            detail: `A simple wrapper for Apple Music's website with some extra features like MPRIS and Discord RPC.\n\n
+                            Disclaimer: This application is not an official Apple product. It is not endorsed, sponsored, or affiliated with Apple Inc. All trademarks, logos, and intellectual property are the property of their respective owners. Use of this app is at your own risk.\n\n
+                            Version: ${app.getVersion()}`.split('\n').map(line => line.trim()).join('\n'),
+                            
+                            buttons: ['Close']
+                        })
+                    }
+                }
+            ]
         }
     ] as Electron.MenuItemConstructorOptions[]
 
@@ -159,9 +210,9 @@ app.whenReady().then(async () => {
         Menu.setApplicationMenu(menu)
     }
 
-    const tray = new Tray(path.join(path.resolve(), 'am-icon.png'))
+    const tray = new Tray(path.join(path.resolve(), 'assets', 'am-icon.png'))
     tray.setToolTip('Apple Music')
-    //tray.on('click', () => mainWindow.show())
+    //tray.on('click', () => mainWindow.show()) this crashes the app for me for some reason
     
     const buildTrayMenu = () => {
         const menu = Menu.buildFromTemplate([
@@ -195,6 +246,7 @@ app.whenReady().then(async () => {
     player.on('shuffle', () => buildMenus())
     player.on('repeat', () => buildMenus())
 
+    // this a workaround for the app not closing properly
     process.on('SIGINT', () => process.exit(0))
 
     mainWindow.on('close', (event) => {
