@@ -1,10 +1,10 @@
 import { Client } from "@xhayper/discord-rpc"
 import { Player } from "../player"
-import { TrackMetadata } from "../@types/interfaces"
+import { TrackMetadata, PlayerIntegration } from "../@types/interfaces"
 import { MKPlaybackState } from "../@types/enums"
 import { secToMicro, secToMillis } from "../utils"
 
-export class DiscordIntegration {
+export class DiscordIntegration implements PlayerIntegration {
     player: Player
     client: Client
     wasPaused: boolean

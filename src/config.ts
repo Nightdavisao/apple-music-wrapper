@@ -1,13 +1,15 @@
 import { App } from "electron/main"
 import { AppOptions } from "./@types/interfaces"
 import fs from 'fs'
+import { EventEmitter } from "stream"
 
-export class AppConfig {
+export class AppConfig extends EventEmitter {
     app: App
     default: AppOptions
     current: AppOptions
 
     constructor(app: App, defaultOptions: AppOptions) {
+        super()
         this.app = app
         this.default = defaultOptions
         this.current = this._load() || defaultOptions
@@ -22,6 +24,13 @@ export class AppConfig {
 
     set(key: string, value: any) {
         this.current[key] = value
+        this.emit('setKey', key)
+        this._save()
+    }
+    
+    delete(key: string) {
+        delete this.current[key]
+        this.emit('deletedKey', key)
         this._save()
     }
 

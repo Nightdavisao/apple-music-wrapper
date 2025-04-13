@@ -21,6 +21,11 @@ export const PLAYBACK_STATES = {
     "completed": 10
 };
 
+export const LASTFM_CREDS = {
+    apiKey: 'a98bc1dd6cfc979509fed721e8ff677a',
+    apiSecret: 'b6ae158dccece92b4b17bbcf349a7aaa'
+}
+
 export const secToMicro = (seconds: number) => Math.round(Number(seconds) * 1e6);
 export const microToSec = (microseconds: number) => Number(microseconds) / 1e6;
 export const secToMillis = (seconds: number) => Math.round(Number(seconds) * 1e3);
