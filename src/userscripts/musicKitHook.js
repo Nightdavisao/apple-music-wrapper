@@ -42,8 +42,23 @@ document.addEventListener('musickitconfigured', async () => {
     })
 
     instance.addEventListener('nowPlayingItemDidChange', async data => {
-        if (data['item'] && data['item']['attributes']) {
-            ipcRenderer.send('nowPlaying', data['item']['attributes'] || {})
+        console.log('nowPlayingItemDidChange', data)
+        const mediaItem = data['item']
+        if (mediaItem && mediaItem['attributes']) {
+            ipcRenderer.send('nowPlaying', mediaItem['attributes'] || {})
+
+            // regex kanged from musickit (this checks if the playing item is in the user's library)
+            if (/^[a|i|l|p]{1}\.[a-zA-Z0-9]+$/.test(mediaItem['id'])) {
+                console.log('sending album data')
+                const libraryData = await instance.api.v3.music(`/v1/me/library/songs/${mediaItem['id']}`, { include: 'albums' })
+                const response = await libraryData['data']
+                ipcRenderer.send('nowPlayingAlbumData', response['data'][0]['relationships']['albums']['data'][0]['attributes'])
+            } else {
+                console.log('sending album data')
+                const catalogData = await instance.api.v3.music(`/v1/catalog/{{storefrontId}}/songs/${mediaItem['id']}`, { include: 'albums' })
+                const response = await catalogData['data']
+                ipcRenderer.send('nowPlayingAlbumData', response['data'][0]['relationships']['albums']['data'][0]['attributes'])
+            }
         }
     })
 

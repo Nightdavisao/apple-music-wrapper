@@ -18,7 +18,7 @@ export class Player extends EventEmitter {
         super()
         this.ipcMain = ipcMain
         this.webContents = webContents
-        this.playerEvents = ['nowPlaying', 'playbackState', 'playbackTime', 'shuffle', 'repeat']
+        this.playerEvents = ['nowPlaying', 'nowPlayingAlbumData', 'playbackState', 'playbackTime', 'shuffle', 'repeat']
         
         this.metadata = null
         this.playbackState = MKPlaybackState.Stopped

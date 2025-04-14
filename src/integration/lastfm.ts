@@ -3,34 +3,58 @@ import { MKPlaybackState } from '../@types/enums';
 import { LastFMClient } from '../lastfm/client';
 import { LastFMScrubbler } from '../lastfm/scrubbler';
 import { Player } from '../player';
-import { millisToSec } from '../utils';
+import { millisToSec, sanitizeName } from '../utils';
 
 
 export class LastFMIntegration implements PlayerIntegration {
     player: Player
     scrubbler: LastFMScrubbler
+    currentTrack: {
+        albumArtist: string
+        artistTrack: string
+        albumName: string
+        trackName: string
+        trackNumber: number
+        duration: number
+    } | null
     wasScrobbled: boolean
     lastPlayingStatusTimestamp: Date | null
     constructor(player: Player, lastFmClient: LastFMClient, userToken: string) {
         this.player = player
+        this.currentTrack = null
         this.scrubbler = new LastFMScrubbler(lastFmClient, userToken)
         this.wasScrobbled = false
         this.lastPlayingStatusTimestamp = null
     }
 
     async load() {
-        this.player.on('nowPlaying', async (data: TrackMetadata) => {
-            console.log('lastfm: nowPlaying', data)
+        this.player.on('nowPlayingAlbumData', async (albumData: {
+            artistName: string
+        }) => {
+            const currentMetadata = this.player.metadata
             this.wasScrobbled = false
             this.lastPlayingStatusTimestamp = null
+            
+            if (currentMetadata) {
+                this.currentTrack = {
+                    albumArtist: albumData.artistName,
+                    artistTrack: currentMetadata.artistName,
+                    albumName: currentMetadata.albumName,
+                    trackName: currentMetadata.name,
+                    trackNumber: currentMetadata.trackNumber,
+                    duration: millisToSec(currentMetadata.durationInMillis)
+                }
+                console.log('lastfm: nowPlaying', this.currentTrack)
 
-            await this.scrubbler.updateNowPlaying(data.artistName,
-                data.name,
-                data.albumName,
-                null,
-                data.trackNumber,
-                millisToSec(data.durationInMillis)
-            )
+                await this.scrubbler.updateNowPlaying(
+                    currentMetadata.artistName,
+                    sanitizeName(currentMetadata.name),
+                    sanitizeName(currentMetadata.albumName),
+                    albumData.artistName,
+                    currentMetadata.trackNumber,
+                    millisToSec(currentMetadata.durationInMillis)
+                )
+            }
         })
 
         this.player.on('playbackState', ({ state }) => {
@@ -39,13 +63,15 @@ export class LastFMIntegration implements PlayerIntegration {
                     this.lastPlayingStatusTimestamp = new Date()
                     break
                 case MKPlaybackState.Stopped:
+                    this.currentTrack = null
                 case MKPlaybackState.Paused:
                     this.lastPlayingStatusTimestamp = null
                     break
             }
         })
 
-        this.player.on('playbackTime', async data => {
+        // TODO: check if this is really accurate to how most scrobblers work.
+        this.player.on('playbackTime', async ({ position }) => {
             const metadata = this.player.metadata
             if (metadata) {
                 const durationSecs = millisToSec(metadata.durationInMillis)
@@ -57,17 +83,23 @@ export class LastFMIntegration implements PlayerIntegration {
                 if (!this.lastPlayingStatusTimestamp) return
 
                 if (!this.wasScrobbled && (currentTimestamp.getTime() > this.lastPlayingStatusTimestamp.getTime() + howMuchToPlay * 1000)) {
-                    console.log('last.fm: scrobbling current track')
-                    const response = await this.scrubbler.scrobble(metadata.artistName,
-                        metadata.name,
-                        currentTimestamp.getTime(),
-                        metadata.albumName, null,
-                        metadata.trackNumber,
-                        millisToSec(metadata.durationInMillis))
+                    if (this.currentTrack) {
+                        console.log('last.fm: scrobbling current track', this.currentTrack)
+                        
+                        const response = await this.scrubbler.scrobble(
+                            this.currentTrack.artistTrack,
+                            sanitizeName(this.currentTrack.trackName),
+                            currentTimestamp.getTime(),
+                            sanitizeName(this.currentTrack.albumName),
+                            this.currentTrack.albumArtist,
+                            this.currentTrack.trackNumber,
+                            this.currentTrack.duration
+                        )
 
-                    if (!response.error) this.wasScrobbled = true
+                        if (!response.error) this.wasScrobbled = true
 
-                    console.log('last.fm:', response)
+                        console.log('last.fm: on scrobbling', JSON.stringify(response))
+                    }
                 }
             }
         })
