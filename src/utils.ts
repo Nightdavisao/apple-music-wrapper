@@ -1,3 +1,5 @@
+import { TrackMetadata } from "./@types/interfaces";
+
 export const PLAYBACK_STATES = {
     "0": "none",
     "1": "loading",
@@ -24,6 +26,26 @@ export const PLAYBACK_STATES = {
 export const LASTFM_CREDS = {
     apiKey: 'a98bc1dd6cfc979509fed721e8ff677a',
     apiSecret: 'b6ae158dccece92b4b17bbcf349a7aaa'
+}
+
+export function sanitizeName(albumName: string) {
+    return albumName
+        .replace(/\s*[(\[]\s*(?:deluxe edition|special edition|anniversary edition|limited edition|bonus tracks|expanded edition|remastered|live|album version)(?:\s?([0-9]+))?\s*[)\]]/gi, "")
+        .replace(/\- ep$/gi, "")
+        .replace(/\- single$/gi, "")
+        .trim()
+}
+
+export function getArtworkUrl(metadata: TrackMetadata) {
+    if (metadata.artwork) {
+        if (metadata.artwork.width && metadata.artwork.height) {
+            return metadata.artwork.url
+                .replace('{w}', metadata.artwork.width.toString())
+                .replace('{h}', metadata.artwork.height.toString())
+        }
+        return metadata.artwork.toString()
+    }
+    return ''
 }
 
 export const secToMicro = (seconds: number) => Math.round(Number(seconds) * 1e6);

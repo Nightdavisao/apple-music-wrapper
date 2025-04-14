@@ -2,7 +2,7 @@ import { Client } from "@xhayper/discord-rpc"
 import { Player } from "../player"
 import { TrackMetadata, PlayerIntegration } from "../@types/interfaces"
 import { MKPlaybackState } from "../@types/enums"
-import { secToMicro, secToMillis } from "../utils"
+import { secToMicro, secToMillis, getArtworkUrl } from "../utils"
 
 export class DiscordIntegration implements PlayerIntegration {
     player: Player
@@ -69,14 +69,14 @@ export class DiscordIntegration implements PlayerIntegration {
         }, interval)
     }
 
-    setActivity(metadata: TrackMetadata) {
+    async setActivity(metadata: TrackMetadata) {
         console.log('discord-rpc: setting Discord activity')
         console.log(this.player.playbackTime)
-        this.client.user?.setActivity({
+        await this.client.user?.setActivity({
             type: 2,
             details: metadata['name'],
             state: `by ${metadata['artistName']}`,
-            largeImageKey: metadata.artwork.url.replace('{w}', metadata.artwork.width.toString()).replace('{h}', metadata.artwork.height.toString()),
+            largeImageKey: getArtworkUrl(metadata),
             largeImageText: metadata['albumName'],
             //smallImageKey: 'play',
             //smallImageText: 'fweqfwefqw',

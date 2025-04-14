@@ -3,7 +3,7 @@ import { PlayerIntegration, TrackMetadata } from '../@types/interfaces';
 import { LoopStatus, PlaybackStatus } from '../mpris/enums';
 import { MPRISService } from '../mpris/service';
 import { Player } from '../player';
-import { secToMicro } from '../utils';
+import { getArtworkUrl, secToMicro } from '../utils';
 
 export class MPRISIntegration implements PlayerIntegration {
     player: Player
@@ -39,8 +39,8 @@ export class MPRISIntegration implements PlayerIntegration {
             }
         })
 
-        this.player.on('nowPlaying', (data: TrackMetadata) => {
-            if (Object.keys(data).length === 0) {
+        this.player.on('nowPlaying', (metadata: TrackMetadata) => {
+            if (Object.keys(metadata).length === 0) {
                 this.mpris.setMetadata({})
                 this.mpris.setPlaybackStatus(PlaybackStatus.Stopped)
                 return
@@ -48,13 +48,13 @@ export class MPRISIntegration implements PlayerIntegration {
             }
             this.mpris.setMetadata({
                 'mpris:trackid': '/org/mpris/MediaPlayer2/Track/1',
-                'mpris:length': data.durationInMillis * 1000,
-                'mpris:artUrl': data.artwork.url.replace('{w}', data.artwork.width.toString()).replace('{h}', data.artwork.height.toString()),
-                'xesam:title': data.name,
-                'xesam:album': data.albumName,
-                'xesam:artist': [data.artistName],
-                'xesam:trackNumber': data.trackNumber,
-                'xesam:discNumber': data.discNumber,
+                'mpris:length': metadata.durationInMillis * 1000,
+                'mpris:artUrl': getArtworkUrl(metadata),
+                'xesam:title': metadata.name,
+                'xesam:album': metadata.albumName,
+                'xesam:artist': [metadata.artistName],
+                'xesam:trackNumber': metadata.trackNumber,
+                'xesam:discNumber': metadata.discNumber,
             })
         })
 
