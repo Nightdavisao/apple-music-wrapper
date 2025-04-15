@@ -20,7 +20,7 @@ export class LastFMIntegration implements PlayerIntegration {
     wasScrobbled: boolean
     wasIgnored: boolean
     didFail: boolean
-    _lock: (() => Promise<void>) | null
+    _lock: (() => Promise<void>) | null = null
     lastPlayingStatusTimestamp: Date | null
     constructor(player: Player, lastFmClient: LastFMClient, userToken: string) {
         this.player = player
@@ -29,7 +29,7 @@ export class LastFMIntegration implements PlayerIntegration {
         this.wasScrobbled = false
         this.wasIgnored = false
         this.didFail = false
-        this._lock = null
+        this._lock = null;
 
         this.lastPlayingStatusTimestamp = null
     }
@@ -82,48 +82,54 @@ export class LastFMIntegration implements PlayerIntegration {
         // TODO: check if this is really accurate to how most scrobblers work.
         this.player.on('playbackTime', async ({ position }) => {
             const metadata = this.player.metadata
-            if (metadata && !this._lock) {
-                this._lock = async () => {
-                    const durationSecs = millisToSec(metadata.durationInMillis)
-                    const maxDuration = (4 * 60 * 60)
-                    const howMuchToPlay = durationSecs > maxDuration ? maxDuration : durationSecs / 2
-
-                    const currentTimestamp = new Date()
-
-                    if (!this.lastPlayingStatusTimestamp) return
-
-                    if (!this.wasScrobbled && (currentTimestamp.getTime() > this.lastPlayingStatusTimestamp.getTime() + howMuchToPlay * 1000)) {
-                        if (this.currentTrack) {
-                            console.log('last.fm: scrobbling current track', this.currentTrack)
-
-                            const response = await this.scrubbler.scrobble(
-                                this.currentTrack.artistTrack,
-                                sanitizeName(this.currentTrack.trackName),
-                                currentTimestamp.getTime(),
-                                sanitizeName(this.currentTrack.albumName),
-                                this.currentTrack.albumArtist,
-                                this.currentTrack.trackNumber,
-                                this.currentTrack.duration
-                            )
-
-                            if (response['scrobbles']['@attr']['ignored'] === 1) {
-                                this.wasIgnored = true
+            if (metadata) {
+                const durationSecs = millisToSec(metadata.durationInMillis)
+                const maxDuration = (4 * 60 * 60)
+                const howMuchToPlay = durationSecs > maxDuration ? maxDuration : durationSecs / 2
+                
+                const currentTimestamp = new Date()
+                
+                if (!this.lastPlayingStatusTimestamp) return
+                
+                if (!this.wasScrobbled && (currentTimestamp.getTime() > this.lastPlayingStatusTimestamp.getTime() + howMuchToPlay * 1000)) {
+                    if (!this._lock) {
+                        console.log('last.fm: acquiring lock')
+                        this._lock = async () => {
+                            if (this.currentTrack) {
+                                console.log('last.fm: scrobbling current track', this.currentTrack)
+    
+                                const response = await this.scrubbler.scrobble(
+                                    this.currentTrack.artistTrack,
+                                    sanitizeName(this.currentTrack.trackName),
+                                    currentTimestamp.getTime(),
+                                    sanitizeName(this.currentTrack.albumName),
+                                    this.currentTrack.albumArtist,
+                                    this.currentTrack.trackNumber,
+                                    this.currentTrack.duration
+                                )
+    
+                                if (response['scrobbles']['@attr']['ignored'] === 1) {
+                                    this.wasIgnored = true
+                                }
+    
+                                if (!response.error) {
+                                    this.wasScrobbled = true
+                                } else {
+                                    this.didFail = true
+                                }
+    
+                                console.log('last.fm: on scrobbling', JSON.stringify(response))
+    
+                                this.player.emit('lfm:scrobble')
                             }
-
-                            if (!response.error) {
-                                this.wasScrobbled = true
-                            } else {
-                                this.didFail = true
-                            }
-
-                            console.log('last.fm: on scrobbling', JSON.stringify(response))
-
-                            this.player.emit('lfm:scrobble')
+                            this._lock = null
                         }
+                    } else {
+                        console.log('last.fm: current thread is locked.')
+                        return
                     }
-                    this._lock = null
                 }
-                await this._lock()
+                if (this._lock) await this._lock()
             }
         })
     }
