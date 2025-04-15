@@ -1,5 +1,7 @@
 import { TrackMetadata } from "./@types/interfaces";
 
+export const AM_BASE_URL = "https://beta.music.apple.com"
+
 export const PLAYBACK_STATES = {
     "0": "none",
     "1": "loading",
@@ -26,6 +28,23 @@ export const PLAYBACK_STATES = {
 export const LASTFM_CREDS = {
     apiKey: 'a98bc1dd6cfc979509fed721e8ff677a',
     apiSecret: 'b6ae158dccece92b4b17bbcf349a7aaa'
+}
+
+export function parseCookie(cookieString: string) {
+    const cookieMap: Record<string, string> = {}
+    const cookies = cookieString.split(';').map(item => item.trim())
+
+    for (const cookie of cookies) {
+        const separatorIndex = cookie.indexOf('=')
+        if (separatorIndex > -1) {
+            const key = cookie.substring(0, separatorIndex)
+            const value = cookie.substring(separatorIndex + 1)
+            
+            cookieMap[key] = value
+        }
+    }
+
+    return cookieMap
 }
 
 export function sanitizeName(albumName: string) {

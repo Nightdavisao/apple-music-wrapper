@@ -8,7 +8,7 @@ import { MKRepeatMode } from './@types/enums';
 import { DiscordIntegration } from './integration/discord';
 import { AppConfig } from './config';
 import { LastFMClient } from './lastfm/client';
-import { LASTFM_CREDS } from './utils';
+import { AM_BASE_URL, LASTFM_CREDS, parseCookie } from './utils';
 import { LastFMIntegration } from './integration/lastfm';
 
 let mainWindow: Electron.BrowserWindow;
@@ -377,11 +377,35 @@ app.whenReady().then(async () => {
         }
     })
 
-    mainWindow.webContents.on('dom-ready', () => {
+    mainWindow.webContents.on('did-finish-load', () => {
         const pathJoin = (script: string) => path.join(path.resolve(), 'src', 'userscripts', script)
         mainWindow.webContents.executeJavaScript(fs.readFileSync(pathJoin('musicKitHook.js')).toString())
         mainWindow.webContents.executeJavaScript(fs.readFileSync(pathJoin('styleFix.js')).toString())
     })
 
-    mainWindow.loadURL('https://beta.music.apple.com/br');
+    try {
+        if (!configHelper.get('storefrontId')) {
+            const amResponse = await fetch(AM_BASE_URL)
+            const setCookieResponse = amResponse.headers.get('Set-Cookie')
+            if (setCookieResponse) {
+                const cookie = parseCookie(setCookieResponse)
+                const guessedGeo = cookie['geo']
+    
+                if (guessedGeo) {
+                    console.log(`am-wrapper: guessed user location is ${guessedGeo}`)
+                    configHelper.set('storefrontId', guessedGeo)
+                }
+            }
+        }
+    } catch(e) {
+        console.log('am-wrapper: failed to guess user location for setting the correct storefront.')
+    }
+
+    const guessedGeo = configHelper.get('storefrontId')
+
+    if (guessedGeo && typeof guessedGeo === 'string') {
+        mainWindow.loadURL(`${AM_BASE_URL}/${guessedGeo.toLowerCase()}`)
+    } else {
+        mainWindow.loadURL(AM_BASE_URL)
+    }
 });
