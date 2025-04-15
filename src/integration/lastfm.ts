@@ -84,7 +84,7 @@ export class LastFMIntegration implements PlayerIntegration {
             const metadata = this.player.metadata
             if (metadata) {
                 const durationSecs = millisToSec(metadata.durationInMillis)
-                const maxDuration = (4 * 60 * 60)
+                const maxDuration = 4 * 60
                 const howMuchToPlay = durationSecs > maxDuration ? maxDuration : durationSecs / 2
                 
                 const currentTimestamp = new Date()
