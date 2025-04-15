@@ -18,12 +18,16 @@ export class LastFMIntegration implements PlayerIntegration {
         duration: number
     } | null
     wasScrobbled: boolean
+    wasIgnored: boolean
+    didFail: boolean
     lastPlayingStatusTimestamp: Date | null
     constructor(player: Player, lastFmClient: LastFMClient, userToken: string) {
         this.player = player
         this.currentTrack = null
         this.scrubbler = new LastFMScrubbler(lastFmClient, userToken)
         this.wasScrobbled = false
+        this.wasIgnored = false
+        this.didFail = false
         this.lastPlayingStatusTimestamp = null
     }
 
@@ -33,11 +37,13 @@ export class LastFMIntegration implements PlayerIntegration {
         }) => {
             const currentMetadata = this.player.metadata
             this.wasScrobbled = false
+            this.wasIgnored = false
+            this.didFail = false
             this.lastPlayingStatusTimestamp = null
             
             if (currentMetadata) {
                 this.currentTrack = {
-                    albumArtist: albumData.artistName,
+                    albumArtist: albumData.artistName ?? currentMetadata.artistName,
                     artistTrack: currentMetadata.artistName,
                     albumName: currentMetadata.albumName,
                     trackName: currentMetadata.name,
@@ -96,9 +102,19 @@ export class LastFMIntegration implements PlayerIntegration {
                             this.currentTrack.duration
                         )
 
-                        if (!response.error) this.wasScrobbled = true
+                        if (response['scrobbles']['@attr']['ignored'] === 1) {
+                            this.wasIgnored = true
+                        }
+
+                        if (!response.error) {
+                            this.wasScrobbled = true
+                        } else {
+                            this.didFail = true
+                        }
 
                         console.log('last.fm: on scrobbling', JSON.stringify(response))
+                        
+                        this.player.emit('lfm:scrobble')
                     }
                 }
             }

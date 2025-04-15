@@ -4,7 +4,7 @@ import fs from 'fs'
 import { Player } from './player';
 import { MPRISIntegration } from './integration/mpris';
 import { TrackMetadata } from './@types/interfaces';
-import { MKRepeatMode } from './@types/enums';
+import { MKPlaybackState, MKRepeatMode } from './@types/enums';
 import { DiscordIntegration } from './integration/discord';
 import { AppConfig } from './config';
 import { LastFMClient } from './lastfm/client';
@@ -79,13 +79,15 @@ app.whenReady().then(async () => {
         const lastFmSession = configHelper.get('lastFmSession')['token']
 
         if (lastFmSession) {
-            player.addIntegration(new LastFMIntegration(player, lastFmClient, lastFmSession))
+            const lastFmIntegration = new LastFMIntegration(player, lastFmClient, lastFmSession)
+            player.addIntegration(lastFmIntegration)
+            return lastFmIntegration
         } else {
             console.log('last.fm: tried to load lastfm integration, but the saved session is invalid')
         }
     }
 
-    loadLastFmIntegration()
+    const lastFmIntegration = loadLastFmIntegration()
 
     player.initalize()
 
@@ -211,7 +213,7 @@ app.whenReady().then(async () => {
             label: 'Options',
             submenu: [
                 {
-                    label: 'Enable Discord RPC',
+                    label: 'Discord integration',
                     type: 'checkbox',
                     checked: configHelper.get('enableDiscordRPC'),
                     click: (menuItem: MenuItem) => {
@@ -219,7 +221,7 @@ app.whenReady().then(async () => {
                     }
                 },
                 {
-                    label: 'Enable MPRIS',
+                    label: 'MPRIS integration',
                     type: 'checkbox',
                     checked: configHelper.get('enableMPRIS'),
                     click: (menuItem: MenuItem) => {
@@ -249,6 +251,18 @@ app.whenReady().then(async () => {
                                 label: configHelper.get('lastFmSession')['subscriber'] === 1 ? 'Last.fm Pro' : 'Normal user',
                                 checked: configHelper.get('lastFmSession')['subscriber'] === 1,
                                 type: 'checkbox',
+                                enabled: false
+                            },
+                            {
+                                type: 'separator'
+                            },
+                            {
+                                label: lastFmIntegration?.wasScrobbled ?
+                                    'Scrobbled'
+                                    : lastFmIntegration?.wasIgnored ? 'Scrobble ignored' :
+                                    player.playbackState === MKPlaybackState.Playing ? 'Scrobbling' : 'Not playing',
+                                type: 'checkbox',
+                                checked: lastFmIntegration?.wasScrobbled,
                                 enabled: false
                             },
                             {
@@ -343,12 +357,14 @@ app.whenReady().then(async () => {
 
     buildMenus()
 
-    player.on('nowPlaying', async (data: TrackMetadata) => buildMenus())
-    player.on('shuffle', async () => buildMenus())
-    player.on('repeat', async () => buildMenus())
+    player.on('nowPlaying', () => buildMenus())
+    player.on('playbackState', () => buildMenus())
+    player.on('lfm:scrobble', () => buildMenus())
+    player.on('shuffle', () => buildMenus())
+    player.on('repeat', () => buildMenus())
 
-    configHelper.on('setKey', async () => buildMenus())
-    configHelper.on('deletedKey', async () => buildMenus())
+    configHelper.on('setKey', () => buildMenus())
+    configHelper.on('deletedKey', () => buildMenus())
 
     // this a workaround for the app not closing properly
     process.on('SIGINT', () => process.exit(0))
