@@ -3,7 +3,6 @@ import path from 'path'
 import fs from 'fs'
 import { Player } from './player';
 import { MPRISIntegration } from './integration/mpris';
-import { TrackMetadata } from './@types/interfaces';
 import { MKPlaybackState, MKRepeatMode } from './@types/enums';
 import { DiscordIntegration } from './integration/discord';
 import { AppConfig } from './config';
@@ -49,11 +48,13 @@ app.whenReady().then(async () => {
     let isQuitting = false
 
     await components.whenReady()
+    const resourcesPath = process.env.NODE_ENV === 'dev' ? __dirname : process.resourcesPath 
+
     mainWindow = new BrowserWindow({
         width: 800,
         height: 600,
         webPreferences: {
-            preload: path.join(path.resolve(), 'dist', 'preload.js'),
+            preload: path.join(__dirname, 'preload.js'),
             nodeIntegration: false,
             plugins: true
         }
@@ -325,7 +326,8 @@ app.whenReady().then(async () => {
         Menu.setApplicationMenu(menu)
     }
 
-    const tray = new Tray(path.join(path.resolve(), 'assets', 'am-icon.png'))
+
+    const tray = new Tray(path.join(resourcesPath, 'assets', 'am-icon.png'))
     tray.setToolTip('Apple Music')
     //tray.on('click', () => mainWindow.show()) this crashes the app for me for some reason
 
@@ -394,7 +396,7 @@ app.whenReady().then(async () => {
     })
 
     mainWindow.webContents.on('did-finish-load', () => {
-        const pathJoin = (script: string) => path.join(path.resolve(), 'src', 'userscripts', script)
+        const pathJoin = (script: string) => path.join(resourcesPath, 'assets', 'userscripts', script)
         mainWindow.webContents.executeJavaScript(fs.readFileSync(pathJoin('musicKitHook.js')).toString())
         mainWindow.webContents.executeJavaScript(fs.readFileSync(pathJoin('styleFix.js')).toString())
     })

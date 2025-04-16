@@ -4,9 +4,19 @@
   "description": "",
   "main": "dist/main.js",
   "scripts": {
-    "start": "npx tsc && ELECTRON_OZONE_PLATFORM_HINT=wayland electron .",
+    "start": "npx tsc && NODE_ENV=dev ELECTRON_OZONE_PLATFORM_HINT=wayland electron .",
     "build": "npx tsc",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "app:dist": "npx tsc && node buildstep.js && electron-builder"
+  },
+  "build": {
+    "icon": "assets/am-icon.png",
+    "appId": "io.nightdavisao.amwrapper",
+    "extraResources": ["assets/**/*"],
+    "files": ["dist/**/*.js"],
+    "electronDownload": {
+      "mirror": "https://github.com/castlabs/electron-releases/releases/download/v"
+    }
   },
   "keywords": [],
   "author": "",
@@ -14,6 +24,7 @@
   "type": "commonjs",
   "devDependencies": {
     "electron": "github:castlabs/electron-releases#v35.0.1+wvcus",
+    "electron-builder": "^26.0.12",
     "typescript": "^5.8.2"
   },
   "dependencies": {
