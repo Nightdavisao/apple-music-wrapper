@@ -129,7 +129,12 @@ export class LastFMIntegration implements PlayerIntegration {
                         return
                     }
                 }
-                if (this._lock) await this._lock()
+                try {
+                    if (this._lock) await this._lock()
+                } catch(e) {
+                    console.log('last.fm: current thread threw an exception. freeing lock', e)
+                    this._lock = null
+                }
             }
         })
     }
