@@ -20,7 +20,7 @@ export class DiscordIntegration implements PlayerIntegration {
         this.client.on('ready', () => {
             console.log('discord-rpc: discord RPC ready')
 
-            //this.player.on('nowPlaying', (metadata: TrackMetadata) => this.setActivity(metadata))
+            this.player.on('nowPlaying', (metadata: TrackMetadata) => this.setActivity(metadata))
             this.player.on('playbackState', ({ state }) => {
                 switch (state) {
                     case MKPlaybackState.Playing:
