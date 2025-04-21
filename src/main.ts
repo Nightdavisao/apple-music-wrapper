@@ -9,6 +9,7 @@ import { AppConfig } from './config';
 import { LastFMClient } from './lastfm/client';
 import { AM_BASE_URL, LASTFM_CREDS, parseCookie } from './utils';
 import { LastFMIntegration } from './integration/lastfm';
+import { TrackMetadata } from './@types/interfaces';
 
 let mainWindow: Electron.BrowserWindow;
 
@@ -19,6 +20,8 @@ app.commandLine.appendSwitch(
 app.commandLine.appendSwitch('disable-features', 'MediaSessionService');
 
 app.whenReady().then(async () => {
+    const DEFAULT_TITLE = 'Apple Music'
+
     const lastFmClient = new LastFMClient(
         LASTFM_CREDS.apiKey,
         LASTFM_CREDS.apiSecret
@@ -48,17 +51,21 @@ app.whenReady().then(async () => {
     let isQuitting = false
 
     await components.whenReady()
-    const resourcesPath = process.env.NODE_ENV === 'dev' ? __dirname : process.resourcesPath 
+    const resourcesPath = process.env.NODE_ENV === 'dev' ?
+        __dirname.split(path.sep).slice(0, -1).join(path.sep)
+        : process.resourcesPath 
 
     mainWindow = new BrowserWindow({
         width: 800,
         height: 600,
+        autoHideMenuBar: true,
         webPreferences: {
             preload: path.join(__dirname, 'preload.js'),
             nodeIntegration: false,
             plugins: true
         }
     });
+    mainWindow.setTitle(DEFAULT_TITLE)
 
     const configHelper = new AppConfig(app, {
         enableDiscordRPC: true,
@@ -100,26 +107,26 @@ app.whenReady().then(async () => {
         },
         { type: 'separator' },
         {
-            label: 'Play/Pause',
+            label: '&Play/Pause',
             click: () => {
                 player.playPause()
             }
         },
         {
-            label: 'Next',
+            label: '&Next',
             click: () => {
                 player.next()
             }
         },
         {
-            label: 'Previous',
+            label: 'P&revious',
             click: () => {
                 player.previous()
             }
         },
         { type: 'separator' },
         {
-            label: 'Shuffle',
+            label: '&Shuffle',
             type: 'checkbox',
             checked: player.shuffleMode,
             click: (menuItem: MenuItem) => {
@@ -127,7 +134,7 @@ app.whenReady().then(async () => {
             }
         },
         {
-            label: 'Repeat',
+            label: '&Repeat',
             submenu: [
                 {
                     label: 'None',
@@ -138,7 +145,7 @@ app.whenReady().then(async () => {
                     }
                 },
                 {
-                    label: 'Track',
+                    label: '&Track',
                     type: 'radio',
                     checked: player.repeatMode === MKRepeatMode.One,
                     click: () => {
@@ -146,7 +153,7 @@ app.whenReady().then(async () => {
                     }
                 },
                 {
-                    label: 'Album/Playlist',
+                    label: 'A&lbum/Playlist',
                     type: 'radio',
                     checked: player.repeatMode === MKRepeatMode.All,
                     click: () => {
@@ -161,16 +168,16 @@ app.whenReady().then(async () => {
     const createMenuTemplate = () => [
         {
             id: 'file',
-            label: 'File',
+            label: '&File',
             submenu: [
                 {
-                    label: 'Back',
+                    label: '&Back',
                     click: () => {
                         mainWindow.webContents.navigationHistory.goBack()
                     }
                 },
                 {
-                    label: 'Forward',
+                    label: '&Forward',
                     click: () => {
                         mainWindow.webContents.navigationHistory.goForward()
                     }
@@ -193,6 +200,7 @@ app.whenReady().then(async () => {
                     label: 'Minimize to tray',
                     click: () => {
                         mainWindow.hide()
+                        buildTrayMenu()
                     }
                 },
                 {
@@ -206,15 +214,15 @@ app.whenReady().then(async () => {
         },
         {
             id: 'playback',
-            label: 'Playback',
+            label: '&Playback',
             submenu: playbackTemplate()
         },
         {
             id: 'options',
-            label: 'Options',
+            label: '&Options',
             submenu: [
                 {
-                    label: 'Discord integration',
+                    label: '&Discord integration',
                     type: 'checkbox',
                     checked: configHelper.get('enableDiscordRPC'),
                     click: (menuItem: MenuItem) => {
@@ -222,7 +230,7 @@ app.whenReady().then(async () => {
                     }
                 },
                 {
-                    label: 'MPRIS integration',
+                    label: '&MPRIS integration',
                     type: 'checkbox',
                     checked: configHelper.get('enableMPRIS'),
                     click: (menuItem: MenuItem) => {
@@ -230,7 +238,7 @@ app.whenReady().then(async () => {
                     }
                 },
                 {
-                    label: "Last.fm",
+                    label: "&Last.fm",
                     submenu: [
                         {
                             label: 'Enabled',
@@ -270,7 +278,7 @@ app.whenReady().then(async () => {
                                 type: 'separator'
                             },
                             {
-                                label: 'Log out...',
+                                label: 'Log &out...',
                                 click: () => {
                                     configHelper.delete('lastFmAuthToken')
                                     configHelper.delete('lastFmSession')
@@ -301,10 +309,10 @@ app.whenReady().then(async () => {
         },
         {
             id: 'help',
-            label: 'Help',
+            label: '&Help',
             submenu: [
                 {
-                    label: 'About',
+                    label: '&About',
                     click: async () => {
                         dialog.showMessageBox({
                             title: 'About',
@@ -335,10 +343,17 @@ app.whenReady().then(async () => {
         const menu = Menu.buildFromTemplate([
             ...playbackTemplate() as MenuItemConstructorOptions[],
             { type: 'separator' },
-            {
+            mainWindow.isVisible() ? {
+                label: 'Hide',
+                click: () => {
+                    mainWindow.hide()
+                    buildTrayMenu()
+                }
+            } : {
                 label: 'Show',
                 click: () => {
                     mainWindow.show()
+                    buildTrayMenu()
                 }
             },
             {
@@ -359,8 +374,31 @@ app.whenReady().then(async () => {
 
     buildMenus()
 
-    player.on('nowPlaying', () => buildMenus())
-    player.on('playbackState', () => buildMenus())
+    player.on('nowPlaying', (metadata: TrackMetadata) => {
+        if (metadata) {
+            mainWindow.setTitle(`${metadata.name} - ${metadata.artistName} — ${DEFAULT_TITLE}`)
+        }
+        buildMenus()
+    })
+    player.on('playbackState', ({ state }) => {
+        if (player.metadata) {
+            switch (state) {
+                case MKPlaybackState.Paused:
+                    mainWindow.setTitle(`⏸ ${player.metadata?.name} - ${player.metadata?.artistName} — ${DEFAULT_TITLE}`)
+                    break
+                case MKPlaybackState.Playing:
+                    mainWindow.setTitle(`▶ ${player.metadata?.name} - ${player.metadata?.artistName} — ${DEFAULT_TITLE}`)
+                    break
+                default:
+                    mainWindow.setTitle(DEFAULT_TITLE)
+                    break
+            }
+        } else {
+            mainWindow.setTitle(DEFAULT_TITLE)
+        }
+        buildMenus()
+    })
+
     player.on('lfm:scrobble', () => buildMenus())
     player.on('shuffle', () => buildMenus())
     player.on('repeat', () => buildMenus())
@@ -371,10 +409,13 @@ app.whenReady().then(async () => {
     // this a workaround for the app not closing properly
     process.on('SIGINT', () => process.exit(0))
 
+    mainWindow.on('page-title-updated', e => e.preventDefault())
+
     mainWindow.on('close', (event) => {
         if (!isQuitting) {
             event.preventDefault()
             mainWindow.hide()
+            buildTrayMenu()
             return false
         } else {
             mainWindow.destroy()
@@ -396,9 +437,19 @@ app.whenReady().then(async () => {
     })
 
     mainWindow.webContents.on('did-finish-load', () => {
-        const pathJoin = (script: string) => path.join(resourcesPath, 'assets', 'userscripts', script)
-        mainWindow.webContents.executeJavaScript(fs.readFileSync(pathJoin('musicKitHook.js')).toString())
-        mainWindow.webContents.executeJavaScript(fs.readFileSync(pathJoin('styleFix.js')).toString())
+        const scriptsFileNames = ['musicKitHook.js', 'styleFix.js', 'navButtons.js']
+        scriptsFileNames.forEach(async scriptFileName => {
+            console.log(`amwrapper: loading ${scriptFileName}`)
+            try {
+                await mainWindow.webContents.executeJavaScript(
+                    fs.readFileSync(
+                        path.join(resourcesPath, 'assets', 'userscripts', scriptFileName)
+                    ).toString()
+                )
+            } catch(e) {
+                console.error(`amwrapper: failed to load script ${scriptFileName}`, e)
+            }
+        })
     })
 
     try {
