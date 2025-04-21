@@ -4,7 +4,8 @@ interface AMWrapper {
     ipcRenderer: {
         send: (channel: string, data: any) => void,
         on: (channel: string, func: (...args: any[]) => void) => void
-    }
+    },
+    openBurgerMenu: () => void
 }
 
 contextBridge.exposeInMainWorld('AMWrapper', {
@@ -15,5 +16,8 @@ contextBridge.exposeInMainWorld('AMWrapper', {
         on: (channel: string, func: (...args: any[]) => void) => {
             ipcRenderer.on(channel, func)
         }
+    },
+    openBurgerMenu: () => {
+        ipcRenderer.send('open-menu')
     }
 } as AMWrapper)

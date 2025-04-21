@@ -50,10 +50,10 @@ export class DiscordIntegration implements PlayerIntegration {
 
     async connect() {
         try {
-            console.log('discord-rpc: connecting to Discord RPC')
+            //console.log('discord-rpc: connecting to Discord RPC')
             await this.client.login()
         } catch (error) {
-            console.error('discord-rpc: error connecting to Discord RPC', error)
+            //console.error('discord-rpc: error connecting to Discord RPC', error)
             this.createReconnectInterval()
         }
     }
@@ -61,7 +61,7 @@ export class DiscordIntegration implements PlayerIntegration {
     createReconnectInterval(interval: number = 3000) {
         if (this.reconnectTimeout) clearTimeout(this.reconnectTimeout)
         this.reconnectTimeout = setTimeout(async () => {
-            console.log('discord-rpc: will try to reconnect every 3 seconds')
+            //console.log('discord-rpc: will try to reconnect every 3 seconds')
 
             if (!this.client.isConnected) {
                 await this.connect()

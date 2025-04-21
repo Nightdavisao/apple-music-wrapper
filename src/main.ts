@@ -167,8 +167,8 @@ app.whenReady().then(async () => {
 
     const createMenuTemplate = () => [
         {
-            id: 'file',
-            label: '&File',
+            id: 'main',
+            label: '&Main',
             submenu: [
                 {
                     label: '&Back',
@@ -182,19 +182,21 @@ app.whenReady().then(async () => {
                         mainWindow.webContents.navigationHistory.goForward()
                     }
                 },
-                { type: 'separator' },
-                {
-                    label: 'Reload',
-                    click: () => {
-                        mainWindow.reload()
+                ...(process.env.NODE_ENV === 'dev' ? [
+                    { type: 'separator' },
+                    {
+                        label: 'Reload',
+                        click: () => {
+                            mainWindow.reload()
+                        }
+                    },
+                    {
+                        label: 'Toggle DevTools',
+                        click: () => {
+                            mainWindow.webContents.toggleDevTools()
+                        }
                     }
-                },
-                {
-                    label: 'Toggle DevTools',
-                    click: () => {
-                        mainWindow.webContents.toggleDevTools()
-                    }
-                },
+                ] : []),
                 { type: 'separator' },
                 {
                     label: 'Minimize to tray',
@@ -330,7 +332,7 @@ app.whenReady().then(async () => {
     ] as Electron.MenuItemConstructorOptions[]
 
     const buildMainWindowMenu = async () => {
-        const menu = Menu.buildFromTemplate(await createMenuTemplate())
+        const menu = Menu.buildFromTemplate(createMenuTemplate())
         Menu.setApplicationMenu(menu)
     }
 
@@ -423,16 +425,24 @@ app.whenReady().then(async () => {
         }
     })
 
+    ipcMain.on('open-menu', () => {
+        const menu = Menu.buildFromTemplate(createMenuTemplate())
+        menu.popup({ window: mainWindow })
+    })
+
     mainWindow.webContents.on('before-input-event', (event, input) => {
         if (input.alt && input.key === 'ArrowLeft') {
             mainWindow.webContents.navigationHistory.goBack()
+            return
         }
         if (input.alt && input.key === 'ArrowRight') {
             mainWindow.webContents.navigationHistory.goForward()
+            return
         }
 
         if (input.alt && input.control && input.key.toLowerCase() === 'i') {
             mainWindow.webContents.openDevTools();
+            return
         }
     })
 
