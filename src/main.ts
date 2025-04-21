@@ -167,8 +167,8 @@ app.whenReady().then(async () => {
 
     const createMenuTemplate = () => [
         {
-            id: 'main',
-            label: '&Main',
+            id: 'File',
+            label: '&File',
             submenu: [
                 {
                     label: '&Back',
