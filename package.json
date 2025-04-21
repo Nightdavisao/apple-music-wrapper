@@ -7,7 +7,7 @@
     "start": "npx tsc && NODE_ENV=dev ELECTRON_OZONE_PLATFORM_HINT=wayland electron .",
     "build": "npx tsc",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "app:dist": "npx tsc && node buildstep.js && electron-builder"
+    "app:dist": "npx tsc && electron-builder"
   },
   "build": {
     "icon": "assets/am-icon.png",
