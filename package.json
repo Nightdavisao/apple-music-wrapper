@@ -12,6 +12,9 @@
   "build": {
     "icon": "assets/am-icon.png",
     "appId": "io.nightdavisao.amwrapper",
+    "linux": {
+      "category": "AudioVideo"
+    },
     "extraResources": [
       "assets/**/*"
     ],
