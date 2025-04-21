@@ -34,9 +34,9 @@ export class DiscordIntegration implements PlayerIntegration {
                         break
                 }
             })
-            this.player.on('playbackTime', () => {
+            this.player.on('playbackTime', async () => {
                 if (this.player.metadata && this.wasPaused) {
-                    this.setActivity(this.player.metadata)
+                    await this.setActivity(this.player.metadata)
                     this.wasPaused = false
                 }
             })
@@ -71,12 +71,14 @@ export class DiscordIntegration implements PlayerIntegration {
 
     async setActivity(metadata: TrackMetadata) {
         console.log('discord-rpc: setting Discord activity')
-        console.log(this.player.playbackTime)
+        
+        const artwork = getArtworkUrl(metadata)
+        const artworkUrl = artwork.length <= 256 ? artwork : ''
         await this.client.user?.setActivity({
             type: 2,
             details: metadata['name'],
             state: `by ${metadata['artistName']}`,
-            largeImageKey: getArtworkUrl(metadata),
+            largeImageKey: artworkUrl,
             largeImageText: metadata['albumName'],
             //smallImageKey: 'play',
             //smallImageText: 'fweqfwefqw',

@@ -62,7 +62,7 @@ export function getArtworkUrl(metadata: TrackMetadata) {
                 .replace('{w}', metadata.artwork.width.toString())
                 .replace('{h}', metadata.artwork.height.toString())
         }
-        return metadata.artwork.toString()
+        return metadata.artwork.url
     }
     return ''
 }
