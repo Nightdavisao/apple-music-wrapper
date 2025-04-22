@@ -2,7 +2,7 @@ import { Client } from "@xhayper/discord-rpc"
 import { Player } from "../player"
 import { TrackMetadata, PlayerIntegration } from "../@types/interfaces"
 import { MKPlaybackState } from "../@types/enums"
-import { secToMicro, secToMillis, getArtworkUrl } from "../utils"
+import { secToMillis, getArtworkUrl } from "../utils"
 
 export class DiscordIntegration implements PlayerIntegration {
     player: Player
@@ -19,27 +19,27 @@ export class DiscordIntegration implements PlayerIntegration {
     async load() {
         this.client.on('ready', () => {
             console.log('discord-rpc: discord RPC ready')
-
-            this.player.on('nowPlaying', (metadata: TrackMetadata) => this.setActivity(metadata))
-            this.player.on('playbackState', ({ state }) => {
-                switch (state) {
-                    case MKPlaybackState.Playing:
-                        if (this.player.metadata) this.setActivity(this.player.metadata)
-                        break
-                    case MKPlaybackState.Stopped:
-                    case MKPlaybackState.Paused:
-                    default:
-                        this.wasPaused = true
-                        this.client.user?.clearActivity()
-                        break
-                }
-            })
-            this.player.on('playbackTime', async () => {
-                if (this.player.metadata && this.wasPaused) {
-                    await this.setActivity(this.player.metadata)
-                    this.wasPaused = false
-                }
-            })
+        })
+        
+        this.player.on('nowPlaying', (metadata: TrackMetadata) => this.setActivity(metadata))
+        this.player.on('playbackState', ({ state }) => {
+            switch (state) {
+                case MKPlaybackState.Playing:
+                    if (this.player.metadata) this.setActivity(this.player.metadata)
+                    break
+                case MKPlaybackState.Stopped:
+                case MKPlaybackState.Paused:
+                default:
+                    this.wasPaused = true
+                    this.client.user?.clearActivity()
+                    break
+            }
+        })
+        this.player.on('playbackTime', async () => {
+            if (this.player.metadata && this.wasPaused) {
+                await this.setActivity(this.player.metadata)
+                this.wasPaused = false
+            }
         })
         this.client.on('disconnected', () => {
             console.log('discord-rpc: disconnected from Discord RPC')
@@ -52,6 +52,8 @@ export class DiscordIntegration implements PlayerIntegration {
         try {
             //console.log('discord-rpc: connecting to Discord RPC')
             await this.client.login()
+
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
         } catch (error) {
             //console.error('discord-rpc: error connecting to Discord RPC', error)
             this.createReconnectInterval()
@@ -70,8 +72,10 @@ export class DiscordIntegration implements PlayerIntegration {
     }
 
     async setActivity(metadata: TrackMetadata) {
+        if (!this.client.isConnected) return
+
         console.log('discord-rpc: setting Discord activity')
-        
+
         const artwork = getArtworkUrl(metadata)
         const artworkUrl = artwork.length <= 256 ? artwork : ''
         await this.client.user?.setActivity({
