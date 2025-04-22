@@ -30,9 +30,14 @@
   "license": "ISC",
   "type": "commonjs",
   "devDependencies": {
+    "@eslint/js": "^9.25.1",
     "electron": "github:castlabs/electron-releases#v36.0.0-beta.7+wvcus",
     "electron-builder": "^26.0.12",
-    "typescript": "^5.8.2"
+    "eslint": "^9.25.1",
+    "eslint-plugin-promise": "^7.2.1",
+    "globals": "^16.0.0",
+    "typescript": "^5.8.2",
+    "typescript-eslint": "^8.31.0"
   },
   "dependencies": {
     "@xhayper/discord-rpc": "^1.2.0",
