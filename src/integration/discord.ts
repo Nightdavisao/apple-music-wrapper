@@ -3,13 +3,18 @@ import { Player } from "../player"
 import { TrackMetadata, PlayerIntegration } from "../@types/interfaces"
 import { MKPlaybackState } from "../@types/enums"
 import { secToMillis, getArtworkUrl } from "../utils"
+import { Logger } from "log4js"
+import log4js from "log4js"
 
 export class DiscordIntegration implements PlayerIntegration {
+    logger: Logger
     player: Player
     client: Client
     wasPaused: boolean
     reconnectTimeout: NodeJS.Timeout | null
     constructor(player: Player) {
+        this.logger = log4js.getLogger('discord-integration')
+        this.logger.level = 'debug'
         this.player = player
         this.client = new Client({ clientId: '1350945271827136522' })
         this.wasPaused = false
@@ -18,7 +23,7 @@ export class DiscordIntegration implements PlayerIntegration {
 
     async load() {
         this.client.on('ready', () => {
-            console.log('discord-rpc: discord RPC ready')
+            this.logger.info('discord RPC ready')
         })
         
         this.player.on('nowPlaying', (metadata: TrackMetadata) => this.setActivity(metadata))
@@ -42,7 +47,7 @@ export class DiscordIntegration implements PlayerIntegration {
             }
         })
         this.client.on('disconnected', () => {
-            console.log('discord-rpc: disconnected from Discord RPC')
+            this.logger.info('disconnected from Discord RPC')
             this.createReconnectInterval()
         })
         await this.connect()
@@ -50,12 +55,8 @@ export class DiscordIntegration implements PlayerIntegration {
 
     async connect() {
         try {
-            //console.log('discord-rpc: connecting to Discord RPC')
             await this.client.login()
-
-            // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        } catch (error) {
-            //console.error('discord-rpc: error connecting to Discord RPC', error)
+        } catch {
             this.createReconnectInterval()
         }
     }
@@ -63,8 +64,6 @@ export class DiscordIntegration implements PlayerIntegration {
     createReconnectInterval(interval: number = 3000) {
         if (this.reconnectTimeout) clearTimeout(this.reconnectTimeout)
         this.reconnectTimeout = setTimeout(async () => {
-            //console.log('discord-rpc: will try to reconnect every 3 seconds')
-
             if (!this.client.isConnected) {
                 await this.connect()
             }
@@ -74,7 +73,7 @@ export class DiscordIntegration implements PlayerIntegration {
     async setActivity(metadata: TrackMetadata) {
         if (!this.client.isConnected) return
 
-        console.log('discord-rpc: setting Discord activity')
+        this.logger.info('setting Discord activity')
 
         const artwork = getArtworkUrl(metadata)
         const artworkUrl = artwork.length <= 256 ? artwork : ''

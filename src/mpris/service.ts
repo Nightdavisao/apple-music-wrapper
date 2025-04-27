@@ -42,7 +42,7 @@ export class MPRISService extends EventEmitter {
         }
 
         process.on('SIGINT', () => {
-            console.log('disconnecting from dbus')
+            this.logger.debug('disconnecting from dbus')
             this.initalized = false
             this.bus?.disconnect()
         })
@@ -83,31 +83,31 @@ export class MPRISService extends EventEmitter {
                         newMetadata[key] = new dbus.Variant(signature, value);
                     }
                 }
-                console.log('Setting metadata:', newMetadata)
+                this.logger.info('setting metadata:', newMetadata)
                 this.playerInterface.Metadata = newMetadata;
             } catch (error) {
-                console.error('MPRIS service: Error setting metadata:', error)
+                this.logger.error('error setting metadata:', error)
             } 
         }
     }
 
     setPlaybackStatus(status: PlaybackStatus) {
-        console.log('MPRIS service: Setting playback status:', status)
+        this.logger.debug('setting playback status:', status)
         if (this.initalized && this.playerInterface) this.playerInterface.PlaybackStatus = status
     }
 
     setPosition(position: number) {
-        //console.log('MPRIS service: Setting position:', position)
+        //this.logger.debug('setting position:', position)
         if (this.initalized && this.playerInterface) this.playerInterface.Position = position
     }
 
     setLoopStatus(status: LoopStatus) {
-        console.log('MPRIS service: Setting loop status:', status)
+        this.logger.debug('setting loop status:', status)
         if (this.initalized && this.playerInterface) this.playerInterface.LoopStatus = status
     }
 
     setShuffle(shuffle: boolean) {
-        console.log('MPRIS service: Setting shuffle:', shuffle)
+        this.logger.debug('setting shuffle:', shuffle)
         if (this.initalized && this.playerInterface) this.playerInterface.Shuffle = shuffle
     }
 }

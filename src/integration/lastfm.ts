@@ -4,9 +4,10 @@ import { LastFMClient } from '../lastfm/client';
 import { LastFMScrubbler } from '../lastfm/scrubbler';
 import { Player } from '../player';
 import { millisToSec, sanitizeName } from '../utils';
-
-
+import { Logger } from 'log4js';
+import log4js from 'log4js';
 export class LastFMIntegration implements PlayerIntegration {
+    logger: Logger
     player: Player
     scrubbler: LastFMScrubbler
     currentTrack: {
@@ -23,6 +24,8 @@ export class LastFMIntegration implements PlayerIntegration {
     threadLocked: boolean
     lastPlayingStatusTimestamp: Date | null
     constructor(player: Player, lastFmClient: LastFMClient, userToken: string) {
+        this.logger = log4js.getLogger('lastfm-integration')
+        this.logger.level = 'debug'
         this.player = player
         this.currentTrack = null
         this.scrubbler = new LastFMScrubbler(lastFmClient, userToken)
@@ -54,8 +57,7 @@ export class LastFMIntegration implements PlayerIntegration {
                     trackNumber: currentMetadata.trackNumber,
                     duration: millisToSec(currentMetadata.durationInMillis)
                 }
-                console.log('lastfm: nowPlaying', this.currentTrack)
-
+                
                 await this.scrubbler.updateNowPlaying(
                     currentMetadata.artistName,
                     sanitizeName(currentMetadata.name),
@@ -64,6 +66,7 @@ export class LastFMIntegration implements PlayerIntegration {
                     currentMetadata.trackNumber,
                     millisToSec(currentMetadata.durationInMillis)
                 )
+                this.logger.info('updating now playing')
             }
         })
 
@@ -82,7 +85,7 @@ export class LastFMIntegration implements PlayerIntegration {
             if (metadata && !this.wasIgnored) {
                 // should never happen but 
                 if (millisToSec(metadata.durationInMillis) <= 30) {
-                    console.log('last.fm: less than 30 seconds, ignoring track...')
+                    this.logger.info('less than 30 seconds, ignoring track...')
                     this.wasIgnored = true
                     return
                 }
@@ -95,14 +98,14 @@ export class LastFMIntegration implements PlayerIntegration {
                 if (!this.wasScrobbled && (position > howMuchToPlay)) {
                     if (!this.threadLocked) {
                         this.threadLocked = true
-                        console.log('last.fm: acquiring lock')
+                        this.logger.debug('acquiring lock')
                     } else {
                         return
                     }
 
                     try {
                         if (this.currentTrack) {
-                            console.log('last.fm: scrobbling current track', this.currentTrack)
+                            this.logger.info('scrobbling current track', this.currentTrack)
 
                             const currentTimestamp = new Date()
                             const scrobblePromise = async (currentTrack: {
@@ -133,7 +136,7 @@ export class LastFMIntegration implements PlayerIntegration {
                                     this.didFail = true
                                 }
     
-                                console.log('last.fm: on scrobbling', JSON.stringify(response))
+                                this.logger.debug('scrobbling response', response)
     
                                 this.player.emit('lfm:scrobble')
                             }

@@ -71,7 +71,6 @@ export class LastFMClient {
     }
 
     async fetchRequest(builtRequest: RequestBuilderRequest) {
-        console.log('fetchRequest', builtRequest)
         if (builtRequest.httpMethod === HTTPMethod.GET) {
             return fetch(this.rootUrl + '?' + builtRequest.urlParams, {
                 method: builtRequest.httpMethod,
