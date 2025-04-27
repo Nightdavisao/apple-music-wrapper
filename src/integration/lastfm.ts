@@ -1,4 +1,4 @@
-import { PlayerIntegration, TrackMetadata } from '../@types/interfaces';
+import { PlayerIntegration } from '../@types/interfaces';
 import { MKPlaybackState } from '../@types/enums';
 import { LastFMClient } from '../lastfm/client';
 import { LastFMScrubbler } from '../lastfm/scrubbler';
@@ -71,14 +71,8 @@ export class LastFMIntegration implements PlayerIntegration {
             this.threadLocked = false
 
             switch (state) {
-                case MKPlaybackState.Playing:
-                    this.lastPlayingStatusTimestamp = new Date()
-                    break
                 case MKPlaybackState.Stopped:
                     this.currentTrack = null
-                    break
-                case MKPlaybackState.Paused:
-                    this.lastPlayingStatusTimestamp = null
                     break
             }
         })
@@ -96,23 +90,21 @@ export class LastFMIntegration implements PlayerIntegration {
                 const durationSecs = millisToSec(metadata.durationInMillis)
                 const maxDuration = 4 * 60
                 const howMuchToPlay = durationSecs > maxDuration ? maxDuration : durationSecs / 2
-
-                const currentTimestamp = new Date()
-
-                if (!this.lastPlayingStatusTimestamp) return
-
-                if (!this.wasScrobbled && (currentTimestamp.getTime() > this.lastPlayingStatusTimestamp.getTime() + howMuchToPlay * 1000)) {
+                //console.log(`last.fm: howMuchToPlay: ${howMuchToPlay}`)
+                
+                if (!this.wasScrobbled && (position > howMuchToPlay)) {
                     if (!this.threadLocked) {
                         this.threadLocked = true
                         console.log('last.fm: acquiring lock')
                     } else {
                         return
                     }
-
+                    
                     try {                        
                         if (this.currentTrack) {
                             console.log('last.fm: scrobbling current track', this.currentTrack)
-
+                            
+                            const currentTimestamp = new Date()
                             const response = await this.scrubbler.scrobble(
                                 this.currentTrack.artistTrack,
                                 sanitizeName(this.currentTrack.trackName),

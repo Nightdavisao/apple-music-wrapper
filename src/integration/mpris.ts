@@ -3,24 +3,29 @@ import { PlayerIntegration, TrackMetadata } from '../@types/interfaces';
 import { LoopStatus, PlaybackStatus } from '../mpris/enums';
 import { MPRISService } from '../mpris/service';
 import { Player } from '../player';
-import { getArtworkUrl, secToMicro } from '../utils';
+import { getArtworkUrl, microToSec, secToMicro } from '../utils';
+import { Logger } from 'log4js';
+import log4js from 'log4js'
 
 export class MPRISIntegration implements PlayerIntegration {
+    logger: Logger
     player: Player
     mpris: MPRISService
 
     constructor(player: Player) {
+        this.logger = log4js.getLogger('mpris-integration')
+        this.logger.level = 'debug'
         this.player = player
         this.mpris = new MPRISService()
     }
 
     load(): void {
-        console.log('MPRIS initalized')
         this.mpris.on('playpause', () => this.player.playPause())
         this.mpris.on('play', () => this.player.play())
         this.mpris.on('pause', () => this.player.pause())
         this.mpris.on('stop', () => this.player.stop())
-        this.mpris.on('seek', (progress) => this.player.seek(progress))
+        this.mpris.on('seek', (offset) => this.player.seek(this.player.playbackTime + microToSec(offset)))
+        this.mpris.on('setposition', (trackId, position) => this.player.seek(microToSec(position)))
         this.mpris.on('next', () => this.player.next())
         this.mpris.on('previous', () => this.player.previous())
         this.mpris.on('shuffle', (data) => this.player.setShuffle(data.state))
@@ -72,18 +77,10 @@ export class MPRISIntegration implements PlayerIntegration {
             }
         })
 
-        this.player.on('playbackTime', data => {
-            const position = data['position']
-            this.mpris.setPosition(secToMicro(position))
-        })
-
-        this.player.on('shuffle', ({ mode }) => {
-            console.log('Shuffle:', mode)
-            this.mpris.setShuffle(mode)
-        })
+        this.player.on('playbackTime', ({ position }) => this.mpris.setPosition(secToMicro(position)))
+        this.player.on('shuffle', ({ mode }) => this.mpris.setShuffle(mode))
 
         this.player.on('repeat', ({ mode }) => {
-            console.log('Repeat:', mode)
             switch (mode) {
                 case MKRepeatMode.None:
                     this.mpris.setLoopStatus(LoopStatus.None)

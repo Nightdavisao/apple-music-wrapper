@@ -41,6 +41,7 @@
   },
   "dependencies": {
     "@xhayper/discord-rpc": "^1.2.0",
-    "dbus-next": "^0.10.2"
+    "dbus-next": "^0.10.2",
+    "log4js": "^6.9.1"
   }
 }

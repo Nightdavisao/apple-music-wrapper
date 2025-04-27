@@ -2,11 +2,12 @@ import { IpcMain, IpcMainEvent } from 'electron';
 import { EventEmitter } from 'events';
 import { PlayerIntegration, TrackMetadata } from './@types/interfaces';
 import { MKPlaybackState, MKRepeatMode } from './@types/enums';
-
-
+import { Logger } from 'log4js';
+import log4js from 'log4js';
 export class Player extends EventEmitter {
     ipcMain: IpcMain
     webContents: Electron.WebContents
+    logger: Logger
     metadata: TrackMetadata | null
     playbackState: MKPlaybackState
     playbackTime: number
@@ -16,6 +17,7 @@ export class Player extends EventEmitter {
     integrations: PlayerIntegration[]
     constructor(ipcMain: IpcMain, webContents: Electron.WebContents) {
         super()
+        this.logger = log4js.getLogger('player-bridge')
         this.ipcMain = ipcMain
         this.webContents = webContents
         this.playerEvents = ['nowPlaying', 'nowPlayingAlbumData', 'playbackState', 'playbackTime', 'shuffle', 'repeat']
@@ -60,14 +62,14 @@ export class Player extends EventEmitter {
     setShuffle(mode: boolean) {
         if (typeof mode !== 'boolean' || this.shuffleMode === mode) return
 
-        console.log('player: setShuffle', mode)
+        this.logger.debug('setShuffle', mode)
         this.dispatchIpcMessage('shuffle', { mode })
     }
 
     setRepeat(mode: MKRepeatMode) {
         if (typeof mode !== 'string' || this.repeatMode === mode) return
 
-        console.log('player: setRepeat', mode)
+        this.logger.debug('setRepeat', mode)
         this.dispatchIpcMessage('repeat', { mode })
     }
 
@@ -94,9 +96,10 @@ export class Player extends EventEmitter {
         const loadedIntegrations = Promise.all(this.integrations.map(i => i.load()))
         
         loadedIntegrations.then(() => {
-            console.log('player: all integrations loaded')
+            this.logger.info('all integrations loaded')
+            return
         }).catch(error => {
-            console.error('player: error loading integrations', error)
+            this.logger.error('error loading integrations', error)
         })
     }
 

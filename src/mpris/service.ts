@@ -2,8 +2,11 @@ import dbus from 'dbus-next'
 import { EventEmitter } from 'events'
 import { MediaPlayer2PlayerInterface, MediaPlayer2Interface } from './interface'
 import { LoopStatus, PlaybackStatus } from './enums'
+import { Logger } from 'log4js'
+import log4js from 'log4js'
 
 export class MPRISService extends EventEmitter {
+    logger: Logger
     initalized: boolean
     bus: dbus.MessageBus | null
     interface: MediaPlayer2Interface | null
@@ -11,6 +14,9 @@ export class MPRISService extends EventEmitter {
     //playerEvents: string[]
     constructor() {
         super()
+        this.logger = log4js.getLogger('mpris-service')
+        this.logger.level = 'debug'
+
         this.initalized = false
         this.bus = null
         this.interface = null
@@ -27,9 +33,9 @@ export class MPRISService extends EventEmitter {
         
         try {
             const returnCode = await this.bus.requestName(`org.mpris.MediaPlayer2.amwrapper`, dbus.NameFlag.DO_NOT_QUEUE)
-            console.log('Return code:', returnCode)
+            this.logger.debug('return code:', returnCode)
             if (returnCode != dbus.RequestNameReply.PRIMARY_OWNER) {
-                console.error('Could not acquire D-Bus name')
+                this.logger.debug('could not acquire D-Bus name')
             }
         } catch(e) {
             console.error('Error acquiring D-Bus name:', e)

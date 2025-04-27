@@ -1,4 +1,4 @@
-import { app, shell, dialog, BrowserWindow, components, Menu, ipcMain, IpcMainEvent, MenuItem, Tray, MenuItemConstructorOptions } from 'electron';
+import { app, shell, dialog, BrowserWindow, nativeTheme, components, Menu, ipcMain, MenuItem, Tray, MenuItemConstructorOptions } from 'electron';
 import path from 'path'
 import fs from 'fs'
 import { Player } from './player';
@@ -10,6 +10,10 @@ import { LastFMClient } from './lastfm/client';
 import { AM_BASE_URL, LASTFM_CREDS, parseCookie } from './utils';
 import { LastFMIntegration } from './integration/lastfm';
 import { TrackMetadata } from './@types/interfaces';
+import log4js from 'log4js'
+
+const logger = log4js.getLogger('amwrapper-main')
+logger.level = 'debug'
 
 let mainWindow: Electron.BrowserWindow;
 
@@ -29,11 +33,10 @@ app.whenReady().then(async () => {
 
     function validateLfmAuthToken() {
         const authToken = configHelper.get('lastFmAuthToken')
-        console.log('last.fm: validating auth token', authToken)
+        logger.info('validating last.fm auth token', authToken)
 
         lastFmClient.validateAuthToken(authToken)
             .then(data => {
-                console.log('last.fm:', data)
                 configHelper.set('lastFmSession', {
                     username: data['session']['name'],
                     subscriber: data['session']['subscriber'],
@@ -41,9 +44,11 @@ app.whenReady().then(async () => {
                 })
                 configHelper.delete('lastFmAuthToken')
                 loadLastFmIntegration()
+
+                return
             })
             .catch(error => {
-                console.error('last.fm: failed to retrieve an actual token', error)
+                logger.debug('failed to retrieve an actual last.fm token', error)
                 configHelper.delete('lastFmAuthToken')
             })
     }
@@ -63,8 +68,10 @@ app.whenReady().then(async () => {
             preload: path.join(__dirname, 'preload.js'),
             nodeIntegration: false,
             plugins: true
-        }
+        },
+        darkTheme: true
     });
+    nativeTheme.themeSource = 'dark'
     mainWindow.setTitle(DEFAULT_TITLE)
 
     const configHelper = new AppConfig(app, {
@@ -91,7 +98,7 @@ app.whenReady().then(async () => {
             player.addIntegration(lastFmIntegration)
             return lastFmIntegration
         } else {
-            console.log('last.fm: tried to load lastfm integration, but the saved session is invalid')
+            logger.debug('last.fm: tried to load lastfm integration, but the saved session is invalid')
         }
     }
 
@@ -292,11 +299,10 @@ app.whenReady().then(async () => {
                                 click: async () => {
                                     if (!configHelper.get('lastFmAuthToken')) {
                                         const response = await lastFmClient.requestAuthToken()
-                                        console.log('last.fm:', response)
                                         const authToken = response['token']
                                         configHelper.set('lastFmAuthToken', authToken)
                                         if (authToken) {
-                                            console.log('last.fm: successfully retrieved the session token, redirecting user to the authorization page')
+                                            logger.info('last.fm: successfully retrieved the session token, redirecting user to the authorization page')
                                             shell.openExternal(`http://www.last.fm/api/auth/?api_key=${LASTFM_CREDS.apiKey}&token=${authToken}`)
                                         }
                                     } else {
@@ -440,7 +446,7 @@ app.whenReady().then(async () => {
             return
         }
 
-        if (input.alt && input.control && input.key.toLowerCase() === 'i') {
+        if (input.alt && input.shift && input.key.toLowerCase() === 'i') {
             mainWindow.webContents.openDevTools();
             return
         }
@@ -449,7 +455,7 @@ app.whenReady().then(async () => {
     mainWindow.webContents.on('did-finish-load', () => {
         const scriptsFileNames = ['musicKitHook.js', 'styleFix.js', 'navButtons.js']
         scriptsFileNames.forEach(async scriptFileName => {
-            console.log(`amwrapper: loading ${scriptFileName}`)
+            logger.info(`loading ${scriptFileName}`)
             try {
                 await mainWindow.webContents.executeJavaScript(
                     fs.readFileSync(
@@ -457,7 +463,7 @@ app.whenReady().then(async () => {
                     ).toString()
                 )
             } catch(e) {
-                console.error(`amwrapper: failed to load script ${scriptFileName}`, e)
+                logger.debug(`failed to load script ${scriptFileName}`, e)
             }
         })
     })
@@ -471,13 +477,13 @@ app.whenReady().then(async () => {
                 const guessedGeo = cookie['geo']
     
                 if (guessedGeo) {
-                    console.log(`am-wrapper: guessed user location is ${guessedGeo}`)
+                    logger.info(`guessed user location is ${guessedGeo}`)
                     configHelper.set('storefrontId', guessedGeo)
                 }
             }
         }
     } catch(e) {
-        console.log('am-wrapper: failed to guess user location for setting the correct storefront.')
+        logger.debug('failed to guess user location for setting the correct storefront.', e)
     }
 
     const guessedGeo = configHelper.get('storefrontId')
@@ -487,4 +493,6 @@ app.whenReady().then(async () => {
     } else {
         mainWindow.loadURL(AM_BASE_URL)
     }
-});
+
+    return
+}).catch(logger.error);
