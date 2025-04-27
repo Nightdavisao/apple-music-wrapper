@@ -38,5 +38,6 @@ export interface TrackMetadata {
 
 
 export interface AppOptions {
-    [key: string]: never;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    [key: string]: any;
 }
