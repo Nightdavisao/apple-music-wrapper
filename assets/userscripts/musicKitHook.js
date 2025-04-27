@@ -43,13 +43,14 @@ document.addEventListener('musickitconfigured', async () => {
 
     function getAlbumData(response) {
         const data = response['data']
+        console.log('getAlbumData', data)
         let albumData = null
 
         try {
-            albumData = data['data'][0]['relationships']['albums']['data'][0]['attributes']
+            albumData = data[0]['relationships']['albums']['data'][0]['attributes']
         } catch {
             try {
-                albumData = data['data'][0]['attributes']
+                albumData = data[0]['attributes']
             } catch {
                 return instance.nowPlayingItem.attributes
             }
