@@ -32,10 +32,11 @@ export interface TrackMetadata {
     artwork: Artwork;
     playParams: PlayParams;
     isrc: string;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     previews: any[]; // Defina um tipo específico se a estrutura dos previews for conhecida
 }
 
 
 export interface AppOptions {
-    [key: string]: any;
+    [key: string]: never;
 }

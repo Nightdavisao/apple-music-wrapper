@@ -52,6 +52,7 @@ export class MPRISService extends EventEmitter {
     }
 
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     private guessMetadataSignature(key: string, value: any): string | null {
         switch (true) {
             case key === 'mpris:trackid':

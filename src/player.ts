@@ -31,6 +31,7 @@ export class Player extends EventEmitter {
         this.integrations = []
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     dispatchIpcMessage(channel: string, data: any = null) {
         this.webContents.send(channel, data)
     }
@@ -79,6 +80,7 @@ export class Player extends EventEmitter {
 
     initalize() {
         this.playerEvents.forEach(event => {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             this.ipcMain.on(event, (_: IpcMainEvent, data: any) => {
                 this.emit(event, data)
             })

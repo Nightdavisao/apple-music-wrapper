@@ -49,9 +49,9 @@ export function parseCookie(cookieString: string) {
 
 export function sanitizeName(albumName: string) {
     return albumName
-        .replace(/\s*[(\[]\s*(?:deluxe edition|special edition|anniversary edition|limited edition|bonus tracks|expanded edition|remastered|live|album version)(?:\s?([0-9]+))?\s*[)\]]/gi, "")
-        .replace(/\- ep$/gi, "")
-        .replace(/\- single$/gi, "")
+        .replace(/\s*[([]\s*(?:deluxe edition|special edition|anniversary edition|limited edition|bonus tracks|expanded edition|remastered|live|album version)(?:\s?([0-9]+))?\s*[)\]]/gi, "")
+        .replace(/- ep$/gi, "")
+        .replace(/- single$/gi, "")
         .trim()
 }
 

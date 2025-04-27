@@ -27,6 +27,7 @@ export class LastFMClient {
         this.rootUrl = "http://ws.audioscrobbler.com/2.0/"
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     private validateLastFmResponse(response: { [key: string]: any }) {
         if (typeof response !== 'object') throw 'Response is not a JSON object'
 
@@ -44,6 +45,7 @@ export class LastFMClient {
     }
     
     private calcParamsHash(params: Record<string, string>) {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { callback, format, ...newParams } = params
         let formattedString = ''
         for (const key of Object.keys(newParams).sort()) {

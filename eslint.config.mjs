@@ -1,10 +1,13 @@
+// eslint.config.js
 import js from "@eslint/js";
 import globals from "globals";
 import tseslint from "typescript-eslint";
-import { defineConfig } from "eslint/config";
+import { defineConfig, globalIgnores } from "eslint/config";
 import promise from "eslint-plugin-promise";
 
 export default defineConfig([
+  globalIgnores(["dist/"]),
+
   {
     files: ["src/**/*.{js,mjs,cjs,ts}"],
     plugins: { js },

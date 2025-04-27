@@ -1,6 +1,6 @@
 document.addEventListener('musickitconfigured', async () => {
     console.log('MusicKit loaded')
-    const amPlayer = document.querySelector("#apple-music-player")
+    //const amPlayer = document.querySelector("#apple-music-player")
     const ipcRenderer = window.AMWrapper.ipcRenderer
 
     const MusicKit = window.MusicKit
@@ -9,7 +9,7 @@ document.addEventListener('musickitconfigured', async () => {
     instance.bitrate = MusicKit.PlaybackBitrate.HIGH
     instance.previewOnly = false
 
-    ipcRenderer.on('playpause', async (event, data) => {
+    ipcRenderer.on('playpause', () => {
         if (instance.playbackState === MusicKit.PlaybackStates.playing) {
             instance.pause()
         } else {
@@ -31,8 +31,8 @@ document.addEventListener('musickitconfigured', async () => {
         }
     })
 
-    ipcRenderer.on('nextTrack', async (event, data) => instance.skipToNextItem())
-    ipcRenderer.on('previousTrack', async (event, data) => instance.skipToPreviousItem())
+    ipcRenderer.on('nextTrack', async () => instance.skipToNextItem())
+    ipcRenderer.on('previousTrack', async () => instance.skipToPreviousItem())
     ipcRenderer.on('playbackTime', async (event, data) => instance.seekToTime(data.progress))
     ipcRenderer.on('shuffle', async (event, data) => {
         instance.shuffleMode = data.mode ? 1 : 0
@@ -82,7 +82,7 @@ document.addEventListener('musickitconfigured', async () => {
         }
     })
 
-    instance.addEventListener('playbackTimeDidChange', async (event) => {
+    instance.addEventListener('playbackTimeDidChange', async () => {
         //ipcRenderer.send('musickit:playbackProgressDidChange', event)
         if (instance['currentPlaybackTime']) {
             ipcRenderer.send('playbackTime', {
