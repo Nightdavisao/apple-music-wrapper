@@ -11,17 +11,22 @@ import { AM_BASE_URL, LASTFM_CREDS, parseCookie } from './utils';
 import { LastFMIntegration } from './integration/lastfm';
 import { TrackMetadata } from './@types/interfaces';
 import log4js from 'log4js'
+import os from 'node:os'
 
 const logger = log4js.getLogger('amwrapper-main')
 logger.level = 'debug'
 
 let mainWindow: Electron.BrowserWindow;
+const currentPlatform = os.platform()
+logger.debug('current operating system:', currentPlatform)
 
-app.commandLine.appendSwitch(
-    'enable-features',
-    'UseOzonePlatform,WaylandWindowDecorations',
-);
-app.commandLine.appendSwitch('disable-features', 'MediaSessionService');
+if (currentPlatform === 'linux') {
+    app.commandLine.appendSwitch(
+        'enable-features',
+        'UseOzonePlatform,WaylandWindowDecorations',
+    );
+    app.commandLine.appendSwitch('disable-features', 'MediaSessionService');
+}
 
 app.whenReady().then(async () => {
     const DEFAULT_TITLE = 'Apple Music'
@@ -76,11 +81,12 @@ app.whenReady().then(async () => {
 
     const configHelper = new AppConfig(app, {
         enableDiscordRPC: true,
-        enableMPRIS: true
+        enableMPRIS: true,
+        enableLastFm: true
     })
 
     const player = new Player(ipcMain, mainWindow.webContents)
-    if (configHelper.get('enableMPRIS')) {
+    if (configHelper.get('enableMPRIS') && currentPlatform === 'linux') {
         player.addIntegration(new MPRISIntegration(player))
     }
 
