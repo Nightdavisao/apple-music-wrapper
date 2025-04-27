@@ -91,7 +91,7 @@ export class LastFMIntegration implements PlayerIntegration {
                 const maxDuration = 4 * 60
                 const howMuchToPlay = durationSecs > maxDuration ? maxDuration : durationSecs / 2
                 //console.log(`last.fm: howMuchToPlay: ${howMuchToPlay}`)
-                
+
                 if (!this.wasScrobbled && (position > howMuchToPlay)) {
                     if (!this.threadLocked) {
                         this.threadLocked = true
@@ -99,39 +99,55 @@ export class LastFMIntegration implements PlayerIntegration {
                     } else {
                         return
                     }
-                    
-                    try {                        
+
+                    try {
                         if (this.currentTrack) {
                             console.log('last.fm: scrobbling current track', this.currentTrack)
-                            
+
                             const currentTimestamp = new Date()
-                            const response = await this.scrubbler.scrobble(
-                                this.currentTrack.artistTrack,
-                                sanitizeName(this.currentTrack.trackName),
-                                currentTimestamp.getTime(),
-                                sanitizeName(this.currentTrack.albumName),
-                                this.currentTrack.albumArtist,
-                                this.currentTrack.trackNumber,
-                                this.currentTrack.duration
-                            )
+                            const scrobblePromise = async (currentTrack: {
+                                albumArtist: string
+                                artistTrack: string
+                                albumName: string
+                                trackName: string
+                                trackNumber: number
+                                duration: number
+                            }) => {
+                                const response = await this.scrubbler.scrobble(
+                                    currentTrack.artistTrack,
+                                    sanitizeName(currentTrack.trackName),
+                                    currentTimestamp.getTime(),
+                                    sanitizeName(currentTrack.albumName),
+                                    currentTrack.albumArtist,
+                                    currentTrack.trackNumber,
+                                    currentTrack.duration
+                                )
 
-                            if (response['scrobbles']['@attr']['ignored'] === 1) {
-                                this.wasIgnored = true
+                                if (response['scrobbles']['@attr']['ignored'] === 1) {
+                                    this.wasIgnored = true
+                                }
+    
+                                if (!response.error) {
+                                    this.wasScrobbled = true
+                                } else {
+                                    this.didFail = true
+                                }
+    
+                                console.log('last.fm: on scrobbling', JSON.stringify(response))
+    
+                                this.player.emit('lfm:scrobble')
                             }
+                            const timeout = new Promise((_resolve, reject) =>
+                                setTimeout(() => reject(new Error('Scrobble timed out')), 10_000)
+                            );
 
-                            if (!response.error) {
-                                this.wasScrobbled = true
-                            } else {
-                                this.didFail = true
-                            }
-
-                            console.log('last.fm: on scrobbling', JSON.stringify(response))
-
-                            this.player.emit('lfm:scrobble')
+                            await Promise.race([scrobblePromise(this.currentTrack), timeout])
+                        } else {
+                            throw new Error('current track is null/undefined')
                         }
-                        this.threadLocked = false
                     } catch (e) {
-                        console.error('last.fm: failed to scrobble, releasing lock', e)
+                        console.error('last.fm: failed to scrobble', e)
+                    } finally {
                         this.threadLocked = false
                     }
                 }

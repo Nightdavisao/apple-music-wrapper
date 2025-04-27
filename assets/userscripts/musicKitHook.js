@@ -41,6 +41,22 @@ document.addEventListener('musickitconfigured', async () => {
         instance.repeatMode = MusicKit.PlayerRepeatMode[data['mode']]
     })
 
+    function getAlbumData(response) {
+        const data = response['data']
+        let albumData = null
+
+        try {
+            albumData = data['data'][0]['relationships']['albums']['data'][0]['attributes']
+        } catch {
+            try {
+                albumData = data['data'][0]['attributes']
+            } catch {
+                return instance.nowPlayingItem.attributes
+            }
+        }
+        return albumData
+    }
+
     instance.addEventListener('nowPlayingItemDidChange', async data => {
         console.log('nowPlayingItemDidChange', data)
         const mediaItem = data['item']
@@ -52,12 +68,16 @@ document.addEventListener('musickitconfigured', async () => {
                 console.log('sending album data')
                 const libraryData = await instance.api.v3.music(`/v1/me/library/songs/${mediaItem['id']}`, { include: 'albums' })
                 const response = await libraryData['data']
-                ipcRenderer.send('nowPlayingAlbumData', response['data'][0]['relationships']['albums']['data'][0]['attributes'])
+                const albumData = getAlbumData(response)
+                console.log('albumData', albumData)
+                ipcRenderer.send('nowPlayingAlbumData', albumData)
             } else {
                 console.log('sending album data')
                 const catalogData = await instance.api.v3.music(`/v1/catalog/{{storefrontId}}/songs/${mediaItem['id']}`, { include: 'albums' })
                 const response = await catalogData['data']
-                ipcRenderer.send('nowPlayingAlbumData', response['data'][0]['relationships']['albums']['data'][0]['attributes'])
+                const albumData = getAlbumData(response)
+                console.log('albumData', albumData)
+                ipcRenderer.send('nowPlayingAlbumData', albumData)
             }
         }
     })
