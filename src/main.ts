@@ -74,7 +74,8 @@ app.whenReady().then(async () => {
             nodeIntegration: false,
             plugins: true
         },
-        darkTheme: true
+        darkTheme: true,
+        show: false
     });
     nativeTheme.themeSource = 'dark'
     mainWindow.setTitle(DEFAULT_TITLE)
@@ -472,6 +473,7 @@ app.whenReady().then(async () => {
                 logger.debug(`failed to load script ${scriptFileName}`, e)
             }
         })
+        mainWindow.show()
     })
 
     try {
