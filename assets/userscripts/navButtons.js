@@ -17,8 +17,9 @@
   
     function insertBackButton() {
       const logoHeader = document.querySelector(
-        "body > div > div > div.header.svelte-j9kb77 > nav > div.navigation__header.svelte-1ovc3hy > div.logo.svelte-1o7dz8w"
-      );
+        "body > div > div > div.header.svelte-rjjbqs > nav > div.navigation__header.svelte-13li0vp > div.logo.svelte-1o7dz8w"
+      )
+      
       if (!logoHeader) return false;
       if (document.getElementById('amwrapper-buttons')) return
   
