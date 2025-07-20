@@ -459,10 +459,9 @@ app.whenReady().then(async () => {
         }
     })
 
-    mainWindow.webContents.on('did-finish-load', () => {
-        const scriptsFileNames = ['musicKitHook.js', 'styleFix.js', 'navButtons.js']
-        scriptsFileNames.forEach(async scriptFileName => {
-            logger.info(`loading ${scriptFileName}`)
+    function loadScripts(filenames: Array<string>, stage: string) {
+        filenames.forEach(async scriptFileName  => {
+            logger.info(`${stage}: loading ${scriptFileName}`)
             try {
                 await mainWindow.webContents.executeJavaScript(
                     fs.readFileSync(
@@ -473,7 +472,15 @@ app.whenReady().then(async () => {
                 logger.debug(`failed to load script ${scriptFileName}`, e)
             }
         })
-        mainWindow.show()
+    }
+
+    mainWindow.webContents.on('did-navigate', () => loadScripts(['musicKitHook.js'], 'pre-navigation'))
+    mainWindow.webContents.on('did-finish-load', () => loadScripts(['styleFix.js', 'navButtons.js'], 'post-load'))
+    
+    mainWindow.on('ready-to-show', () => mainWindow.show())
+
+    mainWindow.webContents.setWindowOpenHandler(() => {
+        return { action: 'deny' }
     })
 
     try {
