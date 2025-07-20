@@ -25,7 +25,7 @@ export class DiscordIntegration implements PlayerIntegration {
         this.client.on('ready', () => {
             this.logger.info('discord RPC ready')
         })
-        
+
         this.player.on('nowPlaying', (metadata: TrackMetadata) => this.setActivity(metadata))
         this.player.on('playbackState', ({ state }) => {
             switch (state) {
@@ -92,6 +92,13 @@ export class DiscordIntegration implements PlayerIntegration {
     }
 
     unload() {
-        throw new Error('Method not implemented')
+        // todo: properly unload
+        //this.player.off('nowPlaying', this.setActivityBound)
+
+        if (this.client.isConnected) {
+            this.client.removeAllListeners()
+            this.client.destroy()
+            if (this.reconnectTimeout) clearTimeout(this.reconnectTimeout)
+        }
     }
 }
