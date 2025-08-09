@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8" />
+    <title>Apple Music</title>
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #1c1c1c;
+        }
+        #titlebar {
+            -webkit-app-region: drag;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            background-color: #1c1c1c;
+        }
+        .window-btn {
+            -webkit-app-region: no-drag;
+            width: 46px;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: #ffffffa3;
+        }
+        .window-btn:hover {
+            background-color: #3b3b3b;
+            color: #ffffff;
+        }
+        #am-webview {
+            width: 100%;
+            height: calc(100% - 30px);
+        }
+    </style>
+</head>
+<body>
+    <div id="titlebar">
+        <div id="min-btn" class="window-btn">&#x2013;</div>
+        <div id="max-btn" class="window-btn">&#x25A1;</div>
+        <div id="close-btn" class="window-btn">&#x2715;</div>
+    </div>
+    <webview id="am-webview"></webview>
+    <script>
+        const webview = document.getElementById('am-webview');
+        window.AMWrapper.ipcRenderer.on('init', (_event, data) => {
+            webview.setAttribute('preload', data.preload);
+            webview.setAttribute('src', data.url);
+        });
+        webview.addEventListener('dom-ready', () => {
+            window.AMWrapper.ipcRenderer.send('webview-ready', webview.getWebContentsId());
+        });
+        document.getElementById('min-btn').addEventListener('click', () => window.AMWrapper.window.minimize());
+        document.getElementById('max-btn').addEventListener('click', () => window.AMWrapper.window.maximize());
+        document.getElementById('close-btn').addEventListener('click', () => window.AMWrapper.window.close());
+    </script>
+</body>
+</html>

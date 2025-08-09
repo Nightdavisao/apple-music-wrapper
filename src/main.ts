@@ -1,4 +1,4 @@
-import { app, shell, dialog, BrowserWindow, nativeTheme, components, Menu, ipcMain, MenuItem, Tray, MenuItemConstructorOptions } from 'electron';
+import { app, shell, dialog, BrowserWindow, nativeTheme, components, Menu, ipcMain, MenuItem, Tray, MenuItemConstructorOptions, webContents } from 'electron';
 import path from 'path'
 import fs from 'fs'
 import { Player } from './player';
@@ -17,6 +17,9 @@ const logger = log4js.getLogger('amwrapper-main')
 logger.level = 'debug'
 
 let mainWindow: Electron.BrowserWindow;
+let amWebContents: Electron.WebContents;
+let player: Player;
+let lastFmIntegration: LastFMIntegration | undefined;
 const currentPlatform = os.platform()
 logger.debug('current operating system:', currentPlatform)
 
@@ -69,10 +72,12 @@ app.whenReady().then(async () => {
         width: 800,
         height: 600,
         autoHideMenuBar: true,
+        frame: false,
         webPreferences: {
             preload: path.join(__dirname, 'preload.js'),
             nodeIntegration: false,
-            plugins: true
+            plugins: true,
+            webviewTag: true
         },
         darkTheme: true,
         show: false
@@ -85,15 +90,6 @@ app.whenReady().then(async () => {
         enableMPRIS: true,
         enableLastFm: true
     })
-
-    const player = new Player(ipcMain, mainWindow.webContents)
-    if (configHelper.get('enableMPRIS') && currentPlatform === 'linux') {
-        player.addIntegration(new MPRISIntegration(player))
-    }
-
-    if (configHelper.get('enableDiscordRPC')) {
-        player.addIntegration(new DiscordIntegration(player))
-    }
 
     function loadLastFmIntegration() {
         if (!configHelper.get('enableLastFm')) return
@@ -108,10 +104,6 @@ app.whenReady().then(async () => {
             logger.debug('last.fm: tried to load lastfm integration, but the saved session is invalid')
         }
     }
-
-    const lastFmIntegration = loadLastFmIntegration()
-
-    player.initialize()
 
     const playbackTemplate = () => [
         {
@@ -187,13 +179,13 @@ app.whenReady().then(async () => {
                 {
                     label: '&Back',
                     click: () => {
-                        mainWindow.webContents.navigationHistory.goBack()
+                        amWebContents.navigationHistory.goBack()
                     }
                 },
                 {
                     label: '&Forward',
                     click: () => {
-                        mainWindow.webContents.navigationHistory.goForward()
+                        amWebContents.navigationHistory.goForward()
                     }
                 },
                 ...(process.env.NODE_ENV === 'dev' ? [
@@ -201,13 +193,13 @@ app.whenReady().then(async () => {
                     {
                         label: 'Reload',
                         click: () => {
-                            mainWindow.reload()
+                            amWebContents.reload()
                         }
                     },
                     {
                         label: 'Toggle DevTools',
                         click: () => {
-                            mainWindow.webContents.toggleDevTools()
+                            amWebContents.toggleDevTools()
                         }
                     }
                 ] : []),
@@ -383,43 +375,10 @@ app.whenReady().then(async () => {
     }
 
     const buildMenus = () => {
+        if (!player) return
         buildMainWindowMenu()
         buildTrayMenu()
     }
-
-    buildMenus()
-
-    player.on('nowPlaying', (metadata: TrackMetadata) => {
-        if (metadata) {
-            mainWindow.setTitle(`${metadata.name} - ${metadata.artistName} — ${DEFAULT_TITLE}`)
-        }
-        buildMenus()
-    })
-    player.on('playbackState', ({ state }) => {
-        if (player.metadata) {
-            switch (state) {
-                case MKPlaybackState.Paused:
-                    mainWindow.setTitle(`⏸ ${player.metadata?.name} - ${player.metadata?.artistName} — ${DEFAULT_TITLE}`)
-                    break
-                case MKPlaybackState.Playing:
-                    mainWindow.setTitle(`▶ ${player.metadata?.name} - ${player.metadata?.artistName} — ${DEFAULT_TITLE}`)
-                    break
-                default:
-                    mainWindow.setTitle(DEFAULT_TITLE)
-                    break
-            }
-        } else {
-            mainWindow.setTitle(DEFAULT_TITLE)
-        }
-        buildMenus()
-    })
-
-    player.on('lfm:scrobble', () => buildMenus())
-    player.on('shuffle', () => buildMenus())
-    player.on('repeat', () => buildMenus())
-
-    configHelper.on('setKey', () => buildMenus())
-    configHelper.on('deletedKey', () => buildMenus())
 
     // this a workaround for the app not closing properly
     process.on('SIGINT', () => process.exit(0))
@@ -443,45 +402,26 @@ app.whenReady().then(async () => {
         menu.popup({ window: mainWindow })
     })
 
-    mainWindow.webContents.on('before-input-event', (event, input) => {
-        if (input.alt && input.key === 'ArrowLeft') {
-            mainWindow.webContents.navigationHistory.goBack()
-            return
-        }
-        if (input.alt && input.key === 'ArrowRight') {
-            mainWindow.webContents.navigationHistory.goForward()
-            return
-        }
-
-        if (input.alt && input.shift && input.key.toLowerCase() === 'i') {
-            mainWindow.webContents.openDevTools();
-            return
+    ipcMain.on('window', (_event, action: string) => {
+        switch (action) {
+            case 'minimize':
+                mainWindow.minimize()
+                break
+            case 'maximize':
+                if (mainWindow.isMaximized()) {
+                    mainWindow.unmaximize()
+                } else {
+                    mainWindow.maximize()
+                }
+                break
+            case 'close':
+                isQuitting = true
+                app.quit()
+                break
         }
     })
 
-    function loadScripts(filenames: Array<string>, stage: string) {
-        filenames.forEach(async scriptFileName  => {
-            logger.info(`${stage}: loading ${scriptFileName}`)
-            try {
-                await mainWindow.webContents.executeJavaScript(
-                    fs.readFileSync(
-                        path.join(resourcesPath, 'assets', 'userscripts', scriptFileName)
-                    ).toString()
-                )
-            } catch(e) {
-                logger.debug(`failed to load script ${scriptFileName}`, e)
-            }
-        })
-    }
-
-    mainWindow.webContents.on('did-navigate', () => loadScripts(['musicKitHook.js'], 'pre-navigation'))
-    mainWindow.webContents.on('did-finish-load', () => loadScripts(['styleFix.js', 'navButtons.js'], 'post-load'))
-    
     mainWindow.on('ready-to-show', () => mainWindow.show())
-
-    mainWindow.webContents.setWindowOpenHandler(() => {
-        return { action: 'deny' }
-    })
 
     try {
         if (!configHelper.get('storefrontId')) {
@@ -503,11 +443,107 @@ app.whenReady().then(async () => {
 
     const guessedGeo = configHelper.get('storefrontId')
 
+    let amUrl = AM_BASE_URL
     if (guessedGeo && typeof guessedGeo === 'string') {
-        mainWindow.loadURL(`${AM_BASE_URL}/${guessedGeo.toLowerCase()}`)
-    } else {
-        mainWindow.loadURL(AM_BASE_URL)
+        amUrl = `${AM_BASE_URL}/${guessedGeo.toLowerCase()}`
     }
+
+    mainWindow.loadFile(path.join(resourcesPath, 'assets', 'index.html'))
+    mainWindow.webContents.once('did-finish-load', () => {
+        mainWindow.webContents.send('init', {
+            url: amUrl,
+            preload: path.join(__dirname, 'preload.js')
+        })
+    })
+
+    ipcMain.once('webview-ready', (_event, id: number) => {
+        amWebContents = webContents.fromId(id)!
+
+        player = new Player(ipcMain, amWebContents)
+        if (configHelper.get('enableMPRIS') && currentPlatform === 'linux') {
+            player.addIntegration(new MPRISIntegration(player))
+        }
+
+        if (configHelper.get('enableDiscordRPC')) {
+            player.addIntegration(new DiscordIntegration(player))
+        }
+
+        lastFmIntegration = loadLastFmIntegration()
+
+        player.initialize()
+
+        function loadScripts(filenames: Array<string>, stage: string) {
+            filenames.forEach(async scriptFileName => {
+                logger.info(`${stage}: loading ${scriptFileName}`)
+                try {
+                    await amWebContents.executeJavaScript(
+                        fs.readFileSync(
+                            path.join(resourcesPath, 'assets', 'userscripts', scriptFileName)
+                        ).toString()
+                    )
+                } catch (e) {
+                    logger.debug(`failed to load script ${scriptFileName}`, e)
+                }
+            })
+        }
+
+        amWebContents.on('did-navigate', () => loadScripts(['musicKitHook.js'], 'pre-navigation'))
+        amWebContents.on('did-finish-load', () => loadScripts(['styleFix.js', 'navButtons.js'], 'post-load'))
+
+        amWebContents.on('before-input-event', (event, input) => {
+            if (input.alt && input.key === 'ArrowLeft') {
+                amWebContents.navigationHistory.goBack()
+                return
+            }
+            if (input.alt && input.key === 'ArrowRight') {
+                amWebContents.navigationHistory.goForward()
+                return
+            }
+
+            if (input.alt && input.shift && input.key.toLowerCase() === 'i') {
+                amWebContents.openDevTools()
+                return
+            }
+        })
+
+        amWebContents.setWindowOpenHandler(() => {
+            return { action: 'deny' }
+        })
+
+        player.on('nowPlaying', (metadata: TrackMetadata) => {
+            if (metadata) {
+                mainWindow.setTitle(`${metadata.name} - ${metadata.artistName} — ${DEFAULT_TITLE}`)
+            }
+            buildMenus()
+        })
+        player.on('playbackState', ({ state }) => {
+            if (player.metadata) {
+                switch (state) {
+                    case MKPlaybackState.Paused:
+                        mainWindow.setTitle(`⏸ ${player.metadata?.name} - ${player.metadata?.artistName} — ${DEFAULT_TITLE}`)
+                        break
+                    case MKPlaybackState.Playing:
+                        mainWindow.setTitle(`▶ ${player.metadata?.name} - ${player.metadata?.artistName} — ${DEFAULT_TITLE}`)
+                        break
+                    default:
+                        mainWindow.setTitle(DEFAULT_TITLE)
+                        break
+                }
+            } else {
+                mainWindow.setTitle(DEFAULT_TITLE)
+            }
+            buildMenus()
+        })
+
+        player.on('lfm:scrobble', () => buildMenus())
+        player.on('shuffle', () => buildMenus())
+        player.on('repeat', () => buildMenus())
+
+        configHelper.on('setKey', () => buildMenus())
+        configHelper.on('deletedKey', () => buildMenus())
+
+        buildMenus()
+    })
 
     return
 }).catch(logger.error);

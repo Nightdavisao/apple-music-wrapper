@@ -6,7 +6,12 @@ interface AMWrapper {
         send: (channel: string, data: any) => void,
         on: (channel: string, func: (...args: any[]) => void) => void
     },
-    openBurgerMenu: () => void
+    openBurgerMenu: () => void,
+    window: {
+        minimize: () => void,
+        maximize: () => void,
+        close: () => void
+    }
 }
 
 contextBridge.exposeInMainWorld('AMWrapper', {
@@ -20,5 +25,10 @@ contextBridge.exposeInMainWorld('AMWrapper', {
     },
     openBurgerMenu: () => {
         ipcRenderer.send('open-menu')
+    },
+    window: {
+        minimize: () => ipcRenderer.send('window', 'minimize'),
+        maximize: () => ipcRenderer.send('window', 'maximize'),
+        close: () => ipcRenderer.send('window', 'close')
     }
 } as AMWrapper)
