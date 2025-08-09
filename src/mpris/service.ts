@@ -7,7 +7,7 @@ import log4js from 'log4js'
 
 export class MPRISService extends EventEmitter {
     logger: Logger
-    initalized: boolean
+    initialized: boolean
     bus: dbus.MessageBus | null
     interface: MediaPlayer2Interface | null
     playerInterface: MediaPlayer2PlayerInterface | null
@@ -17,7 +17,7 @@ export class MPRISService extends EventEmitter {
         this.logger = log4js.getLogger('mpris-service')
         this.logger.level = 'debug'
 
-        this.initalized = false
+        this.initialized = false
         this.bus = null
         this.interface = null
         this.playerInterface = null
@@ -43,12 +43,12 @@ export class MPRISService extends EventEmitter {
 
         process.on('SIGINT', () => {
             this.logger.debug('disconnecting from dbus')
-            this.initalized = false
+            this.initialized = false
             this.bus?.disconnect()
         })
 
-        this.emit('initalized')
-        this.initalized = true
+        this.emit('initialized')
+        this.initialized = true
     }
 
 
@@ -73,7 +73,7 @@ export class MPRISService extends EventEmitter {
     }
 
     setMetadata(metadata: object) {
-        if (this.initalized && this.playerInterface) {
+        if (this.initialized && this.playerInterface) {
             try {
                 const newMetadata: Record<string, dbus.Variant> = {}
     
@@ -93,21 +93,21 @@ export class MPRISService extends EventEmitter {
 
     setPlaybackStatus(status: PlaybackStatus) {
         this.logger.debug('setting playback status:', status)
-        if (this.initalized && this.playerInterface) this.playerInterface.PlaybackStatus = status
+        if (this.initialized && this.playerInterface) this.playerInterface.PlaybackStatus = status
     }
 
     setPosition(position: number) {
         //this.logger.debug('setting position:', position)
-        if (this.initalized && this.playerInterface) this.playerInterface.Position = position
+        if (this.initialized && this.playerInterface) this.playerInterface.Position = position
     }
 
     setLoopStatus(status: LoopStatus) {
         this.logger.debug('setting loop status:', status)
-        if (this.initalized && this.playerInterface) this.playerInterface.LoopStatus = status
+        if (this.initialized && this.playerInterface) this.playerInterface.LoopStatus = status
     }
 
     setShuffle(shuffle: boolean) {
         this.logger.debug('setting shuffle:', shuffle)
-        if (this.initalized && this.playerInterface) this.playerInterface.Shuffle = shuffle
+        if (this.initialized && this.playerInterface) this.playerInterface.Shuffle = shuffle
     }
 }

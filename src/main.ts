@@ -111,7 +111,7 @@ app.whenReady().then(async () => {
 
     const lastFmIntegration = loadLastFmIntegration()
 
-    player.initalize()
+    player.initialize()
 
     const playbackTemplate = () => [
         {

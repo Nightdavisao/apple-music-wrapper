@@ -78,7 +78,7 @@ export class Player extends EventEmitter {
         this.dispatchIpcMessage('playbackTime', { progress: time })
     }
 
-    initalize() {
+    initialize() {
         this.playerEvents.forEach(event => {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             this.ipcMain.on(event, (_: IpcMainEvent, data: any) => {
