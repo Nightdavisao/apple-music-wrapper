@@ -25,6 +25,23 @@
             background-color: #1c1c1c;
         }
 
+        #logo {
+            -webkit-app-region: no-drag;
+            /* so clicks don't try to drag if you later add a menu */
+            height: 18px;
+            width: 18px;
+            margin: 0 6px 0 4px;
+            display: flex;
+            align-items: center;
+        }
+
+        #logo img,
+        #logo svg {
+            height: 100%;
+            width: 100%;
+            display: block;
+        }
+
         .nav-btn {
             -webkit-app-region: no-drag;
             width: 34px;
@@ -77,14 +94,39 @@
             opacity: 0.3;
             pointer-events: none;
         }
+
+        #app-title {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+            font-size: 12.5px;
+            font-weight: 500;
+            color: #fff;
+            opacity: 0.9;
+            letter-spacing: .25px;
+            user-select: none;
+            margin-left: 2px;
+            margin-right: 8px;
+            line-height: 1;
+            display: flex;
+            align-items: center;
+            /* Keep this draggable area (do not add no-drag) */
+            pointer-events: none;
+            /* so clicks pass through for dragging */
+        }
     </style>
 </head>
 
 <body>
     <div id="titlebar">
-        <div id="menu-btn" class="window-btn">&hellip;</div>
         <div id="back-btn" class="nav-btn" title="Back">&#x2039;</div>
         <div id="forward-btn" class="nav-btn" title="Forward">&#x203A;</div>
+        <div id="menu-btn" class="window-btn">&hellip;</div>
+        <div id="logo" title="Apple Music">
+            <!-- Using local SVG for crisp scaling; file placed alongside this HTML -->
+            <img src="am-icon.svg" alt="Apple Music Logo" />
+
+        </div>
+        <div id="app-title">Apple Music</div>
+
         <div class="spacer"></div>
         <div id="min-btn" class="window-btn">&#x2013;</div>
         <div id="max-btn" class="window-btn">&#x25A1;</div>
@@ -96,6 +138,16 @@
         window.AMWrapper.ipcRenderer.on('init', (_event, data) => {
             webview.setAttribute('preload', data.preload);
             webview.setAttribute('src', data.url);
+            if (data.icon) {
+                const logoImg = document.querySelector('#logo img');
+                if (logoImg) logoImg.setAttribute('src', data.icon);
+            }
+            if (data.url?.includes('classical')) {
+                const titleEl = document.getElementById('app-title');
+                if (titleEl) titleEl.textContent = 'Apple Music Classical';
+                const logoDiv = document.getElementById('logo');
+                if (logoDiv) logoDiv.setAttribute('title', 'Apple Music Classical');
+            }
         });
         webview.addEventListener('dom-ready', () => {
             window.AMWrapper.ipcRenderer.send('webview-ready', webview.getWebContentsId());

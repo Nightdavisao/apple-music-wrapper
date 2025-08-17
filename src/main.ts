@@ -39,6 +39,14 @@ app.whenReady().then(async () => {
     const currentWebsite = configHelper.get('currentWebsite') ?? 'music'
     const DEFAULT_TITLE = currentWebsite === 'music' ? 'Apple Music' : 'Apple Music Classical'
 
+    const getIconFilenames = (website: 'music' | 'classical') => {
+        // png used for tray (better compatibility), svg for in-app logo
+        return {
+            trayPng: website === 'music' ? 'am-icon.png' : 'am-classical-icon.png',
+            rendererSvg: website === 'music' ? 'am-icon.svg' : 'am-classical-icon.svg'
+        }
+    }
+
     const lastFmClient = new LastFMClient(
         LASTFM_CREDS.apiKey,
         LASTFM_CREDS.apiSecret
@@ -383,7 +391,8 @@ app.whenReady().then(async () => {
     }
 
 
-    const tray = new Tray(path.join(resourcesPath, 'assets', 'am-icon.png'))
+    const { trayPng, rendererSvg } = getIconFilenames(currentWebsite as 'music' | 'classical')
+    const tray = new Tray(path.join(resourcesPath, 'assets', trayPng))
     tray.setToolTip(DEFAULT_TITLE)
     //tray.on('click', () => mainWindow.show()) this crashes the app for me for some reason
 
@@ -517,7 +526,8 @@ app.whenReady().then(async () => {
     mainWindow.webContents.once('did-finish-load', () => {
         mainWindow.webContents.send('init', {
             url: amUrl,
-            preload: path.join(__dirname, 'preload.js')
+            preload: path.join(__dirname, 'preload.js'),
+            icon: rendererSvg
         })
     })
 
