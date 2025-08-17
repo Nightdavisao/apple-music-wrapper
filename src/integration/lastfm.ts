@@ -39,8 +39,8 @@ export class LastFMIntegration implements PlayerIntegration {
 
     async load() {
         this.player.on('nowPlayingAlbumData', async (albumData: {
-            artistName: string
-        }) => {
+            artistName: string | null
+        } | null ) => {
             const currentMetadata = this.player.metadata
             this.wasScrobbled = false
             this.wasIgnored = false
@@ -50,7 +50,7 @@ export class LastFMIntegration implements PlayerIntegration {
 
             if (currentMetadata) {
                 this.currentTrack = {
-                    albumArtist: albumData.artistName ?? currentMetadata.artistName,
+                    albumArtist: albumData?.artistName ?? currentMetadata.artistName,
                     artistTrack: currentMetadata.artistName,
                     albumName: currentMetadata.albumName,
                     trackName: currentMetadata.name,
@@ -62,11 +62,13 @@ export class LastFMIntegration implements PlayerIntegration {
                     currentMetadata.artistName,
                     sanitizeName(currentMetadata.name),
                     sanitizeName(currentMetadata.albumName),
-                    albumData.artistName,
+                    albumData?.artistName ?? currentMetadata.artistName,
                     currentMetadata.trackNumber,
                     millisToSec(currentMetadata.durationInMillis)
                 )
                 this.logger.info('updating now playing')
+            } else {
+                this.logger.warn('no current metadata available')
             }
         })
 
