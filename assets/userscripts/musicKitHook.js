@@ -76,14 +76,14 @@
                     // regex kanged from musickit (this checks if the playing item is in the user's library)
                     if (/^[a|i|l|p]{1}\.[a-zA-Z0-9]+$/.test(mediaItem['id'])) {
                         console.log('sending album data')
-                        const libraryData = await instance.api.v3.music(`/v1/me/library/songs/${mediaItem['id']}`, { include: 'albums' })
+                        const libraryData = await instance.api.music(`/v1/me/library/songs/${mediaItem['id']}`, { include: 'albums' })
                         const response = await libraryData['data']
                         const albumData = getAlbumData(response)
                         console.log('albumData', albumData)
                         ipcRenderer.send('nowPlayingAlbumData', albumData)
                     } else {
                         console.log('sending album data')
-                        const catalogData = await instance.api.v3.music(`/v1/catalog/{{storefrontId}}/songs/${mediaItem['id']}`, { include: 'albums' })
+                        const catalogData = await instance.api.music(`/v1/catalog/{{storefrontId}}/songs/${mediaItem['id']}`, { include: 'albums' })
                         const response = await catalogData['data']
                         const albumData = getAlbumData(response)
                         console.log('albumData', albumData)
