@@ -24,10 +24,12 @@ export class LastFMIntegration implements PlayerIntegration {
     threadLocked: boolean
     lastPlayingStatusTimestamp: Date | null
     activeWebsite: WebsiteType;
+    isClassical: boolean;
     constructor(player: Player, activeWebsite: WebsiteType, lastFmClient: LastFMClient, userToken: string) {
         this.logger = log4js.getLogger('lastfm-integration')
         this.logger.level = 'debug'
         this.activeWebsite = activeWebsite
+        this.isClassical = activeWebsite === WebsiteType.Classical
         this.player = player
         this.currentTrack = null
         this.scrubbler = new LastFMScrubbler(lastFmClient, userToken)
@@ -43,8 +45,6 @@ export class LastFMIntegration implements PlayerIntegration {
         this.player.on('nowPlayingAlbumData', async (albumData: {
             artistName: string | null
         } | null ) => {
-            const isClassical = this.activeWebsite === WebsiteType.Classical
-
             const currentMetadata = this.player.metadata
             this.wasScrobbled = false
             this.wasIgnored = false
@@ -55,7 +55,7 @@ export class LastFMIntegration implements PlayerIntegration {
             if (currentMetadata) {
                 this.currentTrack = {
                     albumArtist: albumData?.artistName ?? currentMetadata.artistName,
-                    artistTrack: !isClassical ? currentMetadata.artistName : currentMetadata.composerName,
+                    artistTrack: !this.isClassical ? currentMetadata.artistName : currentMetadata.composerName,
                     albumName: currentMetadata.albumName,
                     trackName: currentMetadata.name,
                     trackNumber: currentMetadata.trackNumber,
@@ -63,12 +63,12 @@ export class LastFMIntegration implements PlayerIntegration {
                 }
                 
                 await this.scrubbler.updateNowPlaying(
-                    currentMetadata.artistName,
-                    sanitizeName(currentMetadata.name),
-                    sanitizeName(currentMetadata.albumName),
-                    albumData?.artistName ?? currentMetadata.artistName,
-                    currentMetadata.trackNumber,
-                    millisToSec(currentMetadata.durationInMillis)
+                    this.currentTrack.artistTrack,
+                    sanitizeName(this.currentTrack.trackName),
+                    sanitizeName(this.currentTrack.albumName),
+                    this.currentTrack.albumArtist,
+                    this.currentTrack.trackNumber,
+                    this.currentTrack.duration
                 )
                 this.logger.info('updating now playing')
             } else {
