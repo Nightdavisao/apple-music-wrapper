@@ -1,6 +1,7 @@
 import { TrackMetadata } from "./@types/interfaces";
 
 export const AM_BASE_URL = "https://beta.music.apple.com"
+export const AM_CLASSICAL_BASE_URL = "https://classical.music.apple.com"
 
 export const PLAYBACK_STATES = {
     "0": "none",

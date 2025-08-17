@@ -12,11 +12,11 @@ export class DiscordIntegration implements PlayerIntegration {
     client: Client
     wasPaused: boolean
     reconnectTimeout: NodeJS.Timeout | null
-    constructor(player: Player) {
+    constructor(player: Player, currentWebsite: 'music' | 'classical') {
         this.logger = log4js.getLogger('discord-integration')
         this.logger.level = 'debug'
         this.player = player
-        this.client = new Client({ clientId: '1350945271827136522' })
+        this.client = new Client({ clientId: currentWebsite === 'music' ? '1350945271827136522' : '1406427068320841788' })
         this.wasPaused = false
         this.reconnectTimeout = null
     }

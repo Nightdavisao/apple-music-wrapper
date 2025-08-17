@@ -7,7 +7,7 @@ import { MKPlaybackState, MKRepeatMode } from './@types/enums';
 import { DiscordIntegration } from './integration/discord';
 import { AppConfig } from './config';
 import { LastFMClient } from './lastfm/client';
-import { AM_BASE_URL, LASTFM_CREDS, parseCookie } from './utils';
+import { AM_BASE_URL, AM_CLASSICAL_BASE_URL, LASTFM_CREDS, parseCookie } from './utils';
 import { LastFMIntegration } from './integration/lastfm';
 import { TrackMetadata } from './@types/interfaces';
 import log4js from 'log4js'
@@ -29,7 +29,14 @@ if (currentPlatform === 'linux') {
 }
 
 app.whenReady().then(async () => {
-    const DEFAULT_TITLE = 'Apple Music'
+    const configHelper = new AppConfig(app, {
+        currentWebsite: 'music',
+        enableDiscordRPC: true,
+        enableMPRIS: true,
+        enableLastFm: true
+    })
+    const currentWebsite = configHelper.get('currentWebsite') ?? 'music'
+    const DEFAULT_TITLE = currentWebsite === 'music' ? 'Apple Music' : 'Apple Music Classical'
 
     const lastFmClient = new LastFMClient(
         LASTFM_CREDS.apiKey,
@@ -80,11 +87,6 @@ app.whenReady().then(async () => {
     nativeTheme.themeSource = 'dark'
     mainWindow.setTitle(DEFAULT_TITLE)
 
-    const configHelper = new AppConfig(app, {
-        enableDiscordRPC: true,
-        enableMPRIS: true,
-        enableLastFm: true
-    })
 
     const player = new Player(ipcMain, mainWindow.webContents)
     if (configHelper.get('enableMPRIS') && currentPlatform === 'linux') {
@@ -92,7 +94,7 @@ app.whenReady().then(async () => {
     }
 
     if (configHelper.get('enableDiscordRPC')) {
-        player.addIntegration(new DiscordIntegration(player))
+        player.addIntegration(new DiscordIntegration(player, currentWebsite))
     }
 
     function loadLastFmIntegration() {
@@ -107,6 +109,13 @@ app.whenReady().then(async () => {
         } else {
             logger.debug('last.fm: tried to load lastfm integration, but the saved session is invalid')
         }
+    }
+
+    function switchWebsite(website: 'music' | 'classical') {
+        configHelper.set('currentWebsite', website)
+        // restart the app
+        app.relaunch()
+        app.quit()
     }
 
     const lastFmIntegration = loadLastFmIntegration()
@@ -184,6 +193,27 @@ app.whenReady().then(async () => {
             id: 'File',
             label: '&File',
             submenu: [
+                {
+                    label: "Switch website",
+                    submenu: [
+                        {
+                            label: 'Music',
+                            type: 'checkbox',
+                            checked: currentWebsite === 'music',
+                            click: () => {
+                                switchWebsite('music')
+                            }
+                        },
+                        {
+                            label: 'Classical',
+                            type: 'checkbox',
+                            checked: currentWebsite === 'classical',
+                            click: () => {
+                                switchWebsite('classical')
+                            }
+                        }
+                    ]
+                },
                 {
                     label: '&Back',
                     click: () => {
@@ -351,7 +381,7 @@ app.whenReady().then(async () => {
 
 
     const tray = new Tray(path.join(resourcesPath, 'assets', 'am-icon.png'))
-    tray.setToolTip('Apple Music')
+    tray.setToolTip(DEFAULT_TITLE)
     //tray.on('click', () => mainWindow.show()) this crashes the app for me for some reason
 
     const buildTrayMenu = () => {
@@ -502,11 +532,12 @@ app.whenReady().then(async () => {
     }
 
     const guessedGeo = configHelper.get('storefrontId')
+    const currentWebsiteURL = configHelper.get('currentWebsite') === "music" ? AM_BASE_URL : AM_CLASSICAL_BASE_URL
 
     if (guessedGeo && typeof guessedGeo === 'string') {
-        mainWindow.loadURL(`${AM_BASE_URL}/${guessedGeo.toLowerCase()}`)
+        mainWindow.loadURL(`${currentWebsiteURL}/${guessedGeo.toLowerCase()}`)
     } else {
-        mainWindow.loadURL(AM_BASE_URL)
+        mainWindow.loadURL(currentWebsiteURL)
     }
 
     return
