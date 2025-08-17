@@ -1,6 +1,6 @@
 {
   "name": "am-wrapper",
-  "version": "0.0.4",
+  "version": "0.0.4-hotfix",
   "description": "",
   "main": "dist/main.js",
   "scripts": {
