@@ -85,6 +85,7 @@ app.whenReady().then(async () => {
         : process.resourcesPath
 
     mainWindow = new BrowserWindow({
+        icon: getIconFilenames(currentWebsite).trayPng,
         width: 800,
         height: 600,
         autoHideMenuBar: true,
