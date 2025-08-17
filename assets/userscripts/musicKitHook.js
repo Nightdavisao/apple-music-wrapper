@@ -9,7 +9,8 @@
 
         //const amPlayer = document.querySelector("#apple-music-player")
         const ipcRenderer = window.AMWrapper.ipcRenderer
-    
+        const areWeClassical = window.location.hostname.includes('classical')
+
         const MusicKit = window.MusicKit
         const instance = MusicKit.getInstance();
         console.log(instance)
@@ -71,7 +72,7 @@
             if (mediaItem && mediaItem['attributes']) {
                 ipcRenderer.send('nowPlaying', mediaItem['attributes'] || {})
 
-                try {
+                if (!areWeClassical) {
                     // regex kanged from musickit (this checks if the playing item is in the user's library)
                     if (/^[a|i|l|p]{1}\.[a-zA-Z0-9]+$/.test(mediaItem['id'])) {
                         console.log('sending album data')
@@ -88,8 +89,7 @@
                         console.log('albumData', albumData)
                         ipcRenderer.send('nowPlayingAlbumData', albumData)
                     }
-                } catch(e) {
-                    console.error('error fetching album data', e)
+                } else {
                     ipcRenderer.send('nowPlayingAlbumData', null)
                 }
             }

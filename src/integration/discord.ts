@@ -1,7 +1,7 @@
 import { Client } from "@xhayper/discord-rpc"
 import { Player } from "../player"
 import { TrackMetadata, PlayerIntegration } from "../@types/interfaces"
-import { MKPlaybackState } from "../@types/enums"
+import { MKPlaybackState, WebsiteType } from "../@types/enums"
 import { secToMillis, getArtworkUrl } from "../utils"
 import { Logger } from "log4js"
 import log4js from "log4js"
@@ -12,11 +12,11 @@ export class DiscordIntegration implements PlayerIntegration {
     client: Client
     wasPaused: boolean
     reconnectTimeout: NodeJS.Timeout | null
-    constructor(player: Player, currentWebsite: 'music' | 'classical') {
+    constructor(player: Player, activeWebsite: WebsiteType) {
         this.logger = log4js.getLogger('discord-integration')
         this.logger.level = 'debug'
         this.player = player
-        this.client = new Client({ clientId: currentWebsite === 'music' ? '1350945271827136522' : '1406427068320841788' })
+        this.client = new Client({ clientId: activeWebsite === WebsiteType.Music ? '1350945271827136522' : '1406427068320841788' })
         this.wasPaused = false
         this.reconnectTimeout = null
     }

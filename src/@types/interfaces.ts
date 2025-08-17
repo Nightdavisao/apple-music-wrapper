@@ -29,6 +29,9 @@ export interface TrackMetadata {
     name: string;
     contentRating: string;
     artistName: string;
+    // so classical!
+    attribution: string;
+    composerName: string;
     artwork: Artwork;
     playParams: PlayParams;
     isrc: string;

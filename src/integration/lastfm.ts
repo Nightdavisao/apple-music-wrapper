@@ -1,5 +1,5 @@
 import { PlayerIntegration } from '../@types/interfaces';
-import { MKPlaybackState } from '../@types/enums';
+import { MKPlaybackState, WebsiteType } from '../@types/enums';
 import { LastFMClient } from '../lastfm/client';
 import { LastFMScrubbler } from '../lastfm/scrubbler';
 import { Player } from '../player';
@@ -23,9 +23,11 @@ export class LastFMIntegration implements PlayerIntegration {
     didFail: boolean
     threadLocked: boolean
     lastPlayingStatusTimestamp: Date | null
-    constructor(player: Player, lastFmClient: LastFMClient, userToken: string) {
+    activeWebsite: WebsiteType;
+    constructor(player: Player, activeWebsite: WebsiteType, lastFmClient: LastFMClient, userToken: string) {
         this.logger = log4js.getLogger('lastfm-integration')
         this.logger.level = 'debug'
+        this.activeWebsite = activeWebsite
         this.player = player
         this.currentTrack = null
         this.scrubbler = new LastFMScrubbler(lastFmClient, userToken)
@@ -41,6 +43,8 @@ export class LastFMIntegration implements PlayerIntegration {
         this.player.on('nowPlayingAlbumData', async (albumData: {
             artistName: string | null
         } | null ) => {
+            const isClassical = this.activeWebsite === WebsiteType.Classical
+
             const currentMetadata = this.player.metadata
             this.wasScrobbled = false
             this.wasIgnored = false
@@ -51,7 +55,7 @@ export class LastFMIntegration implements PlayerIntegration {
             if (currentMetadata) {
                 this.currentTrack = {
                     albumArtist: albumData?.artistName ?? currentMetadata.artistName,
-                    artistTrack: currentMetadata.artistName,
+                    artistTrack: !isClassical ? currentMetadata.artistName : currentMetadata.composerName,
                     albumName: currentMetadata.albumName,
                     trackName: currentMetadata.name,
                     trackNumber: currentMetadata.trackNumber,

@@ -3,7 +3,7 @@ import path from 'path'
 import fs from 'fs'
 import { Player } from './player';
 import { MPRISIntegration } from './integration/mpris';
-import { MKPlaybackState, MKRepeatMode } from './@types/enums';
+import { MKPlaybackState, MKRepeatMode, WebsiteType } from './@types/enums';
 import { DiscordIntegration } from './integration/discord';
 import { AppConfig } from './config';
 import { LastFMClient } from './lastfm/client';
@@ -36,14 +36,14 @@ app.whenReady().then(async () => {
         enableMPRIS: true,
         enableLastFm: true
     })
-    const currentWebsite = configHelper.get('currentWebsite') ?? 'music'
-    const DEFAULT_TITLE = currentWebsite === 'music' ? 'Apple Music' : 'Apple Music Classical'
+    const currentWebsite = configHelper.get('currentWebsite') ?? WebsiteType.Music
+    const DEFAULT_TITLE = currentWebsite === WebsiteType.Music ? 'Apple Music' : 'Apple Music Classical'
 
-    const getIconFilenames = (website: 'music' | 'classical') => {
+    const getIconFilenames = (website: WebsiteType) => {
         // png used for tray (better compatibility), svg for in-app logo
         return {
-            trayPng: website === 'music' ? 'am-icon.png' : 'am-classical-icon.png',
-            rendererSvg: website === 'music' ? 'am-icon.svg' : 'am-classical-icon.svg'
+            trayPng: website === WebsiteType.Music ? 'am-icon.png' : 'am-classical-icon.png',
+            rendererSvg: website === WebsiteType.Music ? 'am-icon.svg' : 'am-classical-icon.svg'
         }
     }
 
@@ -108,7 +108,7 @@ app.whenReady().then(async () => {
         const lastFmSession = configHelper.get('lastFmSession')['token']
 
         if (lastFmSession) {
-            const lastFmIntegration = new LastFMIntegration(player, lastFmClient, lastFmSession)
+            const lastFmIntegration = new LastFMIntegration(player, currentWebsite, lastFmClient, lastFmSession)
             player.addIntegration(lastFmIntegration)
             return lastFmIntegration
         } else {
@@ -116,7 +116,7 @@ app.whenReady().then(async () => {
         }
     }
 
-    function switchWebsite(website: 'music' | 'classical') {
+    function switchWebsite(website: WebsiteType) {
         configHelper.set('currentWebsite', website)
         // restart the app
         app.relaunch()
@@ -203,7 +203,7 @@ app.whenReady().then(async () => {
                             type: 'checkbox',
                             checked: currentWebsite === 'music',
                             click: () => {
-                                switchWebsite('music')
+                                switchWebsite(WebsiteType.Music)
                             }
                         },
                         {
@@ -211,7 +211,7 @@ app.whenReady().then(async () => {
                             type: 'checkbox',
                             checked: currentWebsite === 'classical',
                             click: () => {
-                                switchWebsite('classical')
+                                switchWebsite(WebsiteType.Classical)
                             }
                         }
                     ]
@@ -382,7 +382,7 @@ app.whenReady().then(async () => {
     }
 
 
-    const { trayPng, rendererSvg } = getIconFilenames(currentWebsite as 'music' | 'classical')
+    const { trayPng, rendererSvg } = getIconFilenames(currentWebsite)
     const tray = new Tray(path.join(resourcesPath, 'assets', trayPng))
     tray.setToolTip(DEFAULT_TITLE)
     //tray.on('click', () => mainWindow.show()) this crashes the app for me for some reason
