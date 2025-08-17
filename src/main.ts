@@ -47,12 +47,15 @@ app.whenReady().then(async () => {
         }
     }
 
+    let player: Player;
+    let lastFmIntegration: LastFMIntegration | null = null
+
     const lastFmClient = new LastFMClient(
         LASTFM_CREDS.apiKey,
         LASTFM_CREDS.apiSecret
     )
 
-    function validateLfmAuthToken() {
+    function validateLfmAuthToken(player: Player) {
         const authToken = configHelper.get('lastFmAuthToken')
         logger.info('validating last.fm auth token', authToken)
 
@@ -64,7 +67,7 @@ app.whenReady().then(async () => {
                     token: data['session']['key']
                 })
                 configHelper.delete('lastFmAuthToken')
-                loadLastFmIntegration()
+                loadLastFmIntegration(player)
 
                 return
             })
@@ -98,17 +101,7 @@ app.whenReady().then(async () => {
     nativeTheme.themeSource = 'dark'
     mainWindow.setTitle(DEFAULT_TITLE)
 
-
-    let player = new Player(ipcMain, mainWindow.webContents)
-    if (configHelper.get('enableMPRIS') && currentPlatform === 'linux') {
-        player.addIntegration(new MPRISIntegration(player))
-    }
-
-    if (configHelper.get('enableDiscordRPC')) {
-        player.addIntegration(new DiscordIntegration(player, currentWebsite))
-    }
-
-    function loadLastFmIntegration() {
+    function loadLastFmIntegration(player: Player) {
         if (!configHelper.get('enableLastFm')) return
 
         const lastFmSession = configHelper.get('lastFmSession')['token']
@@ -129,11 +122,8 @@ app.whenReady().then(async () => {
         app.exit()
     }
 
-    let lastFmIntegration = loadLastFmIntegration()
 
-    player.initialize()
-
-    const playbackTemplate = () => [
+    const playbackTemplate = (player: Player) => [
         {
             id: 'nowPlaying',
             label: player.metadata?.name ? `${player.metadata.name} - ${player.metadata.artistName}` : 'No music playing',
@@ -199,7 +189,7 @@ app.whenReady().then(async () => {
     ]
 
 
-    const createMenuTemplate = () => [
+    const createMenuTemplate = (player: Player, lastFmIntegration: LastFMIntegration | null) => [
         {
             id: 'File',
             label: '&File',
@@ -257,7 +247,7 @@ app.whenReady().then(async () => {
                     label: 'Minimize to tray',
                     click: () => {
                         mainWindow.hide()
-                        buildTrayMenu()
+                        buildTrayMenu(player)
                     }
                 },
                 {
@@ -272,7 +262,7 @@ app.whenReady().then(async () => {
         {
             id: 'playback',
             label: '&Playback',
-            submenu: playbackTemplate()
+            submenu: playbackTemplate(player)
         },
         {
             id: 'options',
@@ -354,7 +344,7 @@ app.whenReady().then(async () => {
                                             shell.openExternal(`http://www.last.fm/api/auth/?api_key=${LASTFM_CREDS.apiKey}&token=${authToken}`)
                                         }
                                     } else {
-                                        validateLfmAuthToken()
+                                        validateLfmAuthToken(player)
                                     }
                                 }
                             }
@@ -385,8 +375,8 @@ app.whenReady().then(async () => {
         }
     ] as Electron.MenuItemConstructorOptions[]
 
-    const buildMainWindowMenu = async () => {
-        const menu = Menu.buildFromTemplate(createMenuTemplate())
+    const buildMainWindowMenu = async (player: Player, lastFmIntegration: LastFMIntegration | null) => {
+        const menu = Menu.buildFromTemplate(createMenuTemplate(player, lastFmIntegration))
         Menu.setApplicationMenu(menu)
     }
 
@@ -396,21 +386,21 @@ app.whenReady().then(async () => {
     tray.setToolTip(DEFAULT_TITLE)
     //tray.on('click', () => mainWindow.show()) this crashes the app for me for some reason
 
-    const buildTrayMenu = () => {
+    const buildTrayMenu = (player: Player) => {
         const menu = Menu.buildFromTemplate([
-            ...playbackTemplate() as MenuItemConstructorOptions[],
+            ...playbackTemplate(player) as MenuItemConstructorOptions[],
             { type: 'separator' },
             mainWindow.isVisible() ? {
                 label: 'Hide',
                 click: () => {
                     mainWindow.hide()
-                    buildTrayMenu()
+                    buildTrayMenu(player)
                 }
             } : {
                 label: 'Show',
                 click: () => {
                     mainWindow.show()
-                    buildTrayMenu()
+                    buildTrayMenu(player)
                 }
             },
             {
@@ -424,10 +414,9 @@ app.whenReady().then(async () => {
         tray.setContextMenu(menu)
     }
 
-    const buildMenus = () => {
-        if (!player) return
-        buildMainWindowMenu()
-        buildTrayMenu()
+    const buildMenus = (player: Player, lastFmIntegration: LastFMIntegration | null) => {
+        buildMainWindowMenu(player, lastFmIntegration)
+        buildTrayMenu(player)
     }
 
     // this a workaround for the app not closing properly
@@ -439,7 +428,7 @@ app.whenReady().then(async () => {
         if (!isQuitting) {
             event.preventDefault()
             mainWindow.hide()
-            buildTrayMenu()
+            buildTrayMenu(player)
             return false
         } else {
             mainWindow.destroy()
@@ -448,7 +437,7 @@ app.whenReady().then(async () => {
     })
 
     ipcMain.on('open-menu', () => {
-        const menu = Menu.buildFromTemplate(createMenuTemplate())
+        const menu = Menu.buildFromTemplate(createMenuTemplate(player, lastFmIntegration))
         menu.popup({ window: mainWindow })
     })
 
@@ -543,7 +532,7 @@ app.whenReady().then(async () => {
             player.addIntegration(new DiscordIntegration(player, currentWebsite))
         }
 
-        lastFmIntegration = loadLastFmIntegration()
+        lastFmIntegration = loadLastFmIntegration(player) ?? null
 
         player.initialize()
 
@@ -591,7 +580,7 @@ app.whenReady().then(async () => {
             if (metadata) {
                 mainWindow.setTitle(`${metadata.name} - ${metadata.artistName} — ${DEFAULT_TITLE}`)
             }
-            buildMenus()
+            buildMenus(player, lastFmIntegration)
         })
         player.on('playbackState', ({ state }) => {
             if (player.metadata) {
@@ -609,17 +598,17 @@ app.whenReady().then(async () => {
             } else {
                 mainWindow.setTitle(DEFAULT_TITLE)
             }
-            buildMenus()
+            buildMenus(player, lastFmIntegration)
         })
 
-        player.on('lfm:scrobble', () => buildMenus())
-        player.on('shuffle', () => buildMenus())
-        player.on('repeat', () => buildMenus())
+        player.on('lfm:scrobble', () => buildMenus(player, lastFmIntegration))
+        player.on('shuffle', () => buildMenus(player, lastFmIntegration))
+        player.on('repeat', () => buildMenus(player, lastFmIntegration))
 
-        configHelper.on('setKey', () => buildMenus())
-        configHelper.on('deletedKey', () => buildMenus())
+        configHelper.on('setKey', () => buildMenus(player, lastFmIntegration))
+        configHelper.on('deletedKey', () => buildMenus(player, lastFmIntegration))
 
-        buildMenus()
+        buildMenus(player, lastFmIntegration)
     })
 
     return
