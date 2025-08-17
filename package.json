@@ -10,7 +10,6 @@
     "app:dist": "npx tsc && electron-builder"
   },
   "build": {
-    "name": "am-wrapper",
     "productName": "Apple Music",
     "publish": null,
     "icon": "assets/am-icon.png",
