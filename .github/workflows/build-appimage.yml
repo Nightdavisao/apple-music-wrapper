@@ -15,6 +15,7 @@ jobs:
         with:
           node-version: '20'
           cache: 'npm'
+      - run: rm -rf node
       - run: npm ci
       - run: npm run app:dist -- --linux AppImage
       - name: Upload artifact
