@@ -7,6 +7,7 @@ interface AMWrapper {
         on: (channel: string, func: (...args: any[]) => void) => void
     },
     openBurgerMenu: () => void,
+    // navigation is driven by sending 'nav' events with 'back' | 'forward'
     window: {
         minimize: () => void,
         maximize: () => void,

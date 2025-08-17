@@ -18,8 +18,6 @@ logger.level = 'debug'
 
 let mainWindow: Electron.BrowserWindow;
 let amWebContents: Electron.WebContents;
-let player: Player;
-let lastFmIntegration: LastFMIntegration | undefined;
 const currentPlatform = os.platform()
 logger.debug('current operating system:', currentPlatform)
 
@@ -73,7 +71,7 @@ app.whenReady().then(async () => {
     await components.whenReady()
     const resourcesPath = process.env.NODE_ENV === 'dev' ?
         __dirname.split(path.sep).slice(0, -1).join(path.sep)
-        : process.resourcesPath 
+        : process.resourcesPath
 
     mainWindow = new BrowserWindow({
         width: 800,
@@ -120,7 +118,7 @@ app.whenReady().then(async () => {
         configHelper.set('currentWebsite', website)
         // restart the app
         app.relaunch()
-        app.quit()
+        app.exit()
     }
 
     let lastFmIntegration = loadLastFmIntegration()
@@ -320,7 +318,7 @@ app.whenReady().then(async () => {
                                 label: lastFmIntegration?.wasScrobbled ?
                                     'Scrobbled'
                                     : lastFmIntegration?.wasIgnored ? 'Scrobble ignored' :
-                                    player.playbackState === MKPlaybackState.Playing ? 'Scrobbling' : 'Not playing',
+                                        player.playbackState === MKPlaybackState.Playing ? 'Scrobbling' : 'Not playing',
                                 type: 'checkbox',
                                 checked: lastFmIntegration?.wasScrobbled,
                                 enabled: false
@@ -445,6 +443,30 @@ app.whenReady().then(async () => {
         menu.popup({ window: mainWindow })
     })
 
+    const sendNavState = () => {
+        if (!amWebContents) return
+        const canGoBack = amWebContents.navigationHistory?.canGoBack?.() ?? false
+        const canGoForward = amWebContents.navigationHistory?.canGoForward?.() ?? false
+        mainWindow.webContents.send('nav-state', { back: canGoBack, forward: canGoForward })
+    }
+
+    ipcMain.on('nav', (_event, action: string) => {
+        if (!amWebContents) return
+        switch (action) {
+            case 'back':
+                if (amWebContents.navigationHistory.canGoBack()) {
+                    amWebContents.navigationHistory.goBack()
+                }
+                break
+            case 'forward':
+                if (amWebContents.navigationHistory.canGoForward()) {
+                    amWebContents.navigationHistory.goForward()
+                }
+                break
+        }
+        setTimeout(sendNavState, 50)
+    })
+
     ipcMain.on('window', (_event, action: string) => {
         switch (action) {
             case 'minimize':
@@ -458,7 +480,6 @@ app.whenReady().then(async () => {
                 }
                 break
             case 'close':
-                isQuitting = true
                 app.quit()
                 break
         }
@@ -473,14 +494,14 @@ app.whenReady().then(async () => {
             if (setCookieResponse) {
                 const cookie = parseCookie(setCookieResponse)
                 const guessedGeo = cookie['geo']
-    
+
                 if (guessedGeo) {
                     logger.info(`guessed user location is ${guessedGeo}`)
                     configHelper.set('storefrontId', guessedGeo)
                 }
             }
         }
-    } catch(e) {
+    } catch (e) {
         logger.debug('failed to guess user location for setting the correct storefront.', e)
     }
 
@@ -531,7 +552,10 @@ app.whenReady().then(async () => {
             })
         }
 
-        amWebContents.on('did-finish-load', () => loadScripts(['musicKitHook.js', 'styleFix.js', 'navButtons.js'], 'post-load'))
+        amWebContents.on('did-finish-load', () => loadScripts(['musicKitHook.js', 'styleFix.js'], 'post-load'))
+        amWebContents.on('did-finish-load', () => sendNavState())
+        amWebContents.on('did-navigate-in-page', () => sendNavState())
+        amWebContents.on('did-navigate', () => sendNavState())
 
         amWebContents.on('before-input-event', (event, input) => {
             if (input.alt && input.key === 'ArrowLeft') {
