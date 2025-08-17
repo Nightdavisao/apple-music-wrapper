@@ -10,10 +10,14 @@
     "app:dist": "npx tsc && electron-builder"
   },
   "build": {
+    "name": "am-wrapper",
+    "productName": "Apple Music",
     "publish": null,
     "icon": "assets/am-icon.png",
     "appId": "io.nightdavisao.amwrapper",
     "linux": {
+      "target": "AppImage",
+      "icon": "assets/am-icon.png",
       "category": "AudioVideo"
     },
     "extraResources": [
