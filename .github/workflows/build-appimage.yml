@@ -1,0 +1,31 @@
+name: Build AppImage
+
+on:
+  push:
+    branches: ["*"]
+
+jobs:
+  build-appimage:
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - run: npm run app:dist -- --linux AppImage
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: appimage
+          path: dist/*.AppImage
+      - name: Create pre-release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: appimage-${{ github.sha }}
+          name: AppImage ${{ github.sha }}
+          prerelease: true
+          files: dist/*.AppImage
