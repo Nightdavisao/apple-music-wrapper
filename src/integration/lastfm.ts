@@ -54,7 +54,7 @@ export class LastFMIntegration implements PlayerIntegration {
 
             if (currentMetadata) {
                 this.currentTrack = {
-                    albumArtist: albumData?.artistName ?? currentMetadata.artistName,
+                    albumArtist: !this.isClassical ? (albumData?.artistName ?? currentMetadata.artistName) : currentMetadata.composerName,
                     artistTrack: !this.isClassical ? currentMetadata.artistName : currentMetadata.composerName,
                     albumName: currentMetadata.albumName,
                     trackName: currentMetadata.name,
