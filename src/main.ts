@@ -531,8 +531,7 @@ app.whenReady().then(async () => {
             })
         }
 
-        amWebContents.on('did-navigate', () => loadScripts(['musicKitHook.js'], 'pre-navigation'))
-        amWebContents.on('did-finish-load', () => loadScripts(['styleFix.js', 'navButtons.js'], 'post-load'))
+        amWebContents.on('did-finish-load', () => loadScripts(['musicKitHook.js', 'styleFix.js', 'navButtons.js'], 'post-load'))
 
         amWebContents.on('before-input-event', (event, input) => {
             if (input.alt && input.key === 'ArrowLeft') {
