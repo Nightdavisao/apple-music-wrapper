@@ -24,7 +24,7 @@ export interface TrackMetadata {
     genreNames: string[];
     trackNumber: number;
     hasLyrics: boolean;
-    releaseDate: string; // Pode ser convertido para Date se preferir
+    releaseDate: string;
     durationInMillis: number;
     name: string;
     contentRating: string;
@@ -36,7 +36,7 @@ export interface TrackMetadata {
     playParams: PlayParams;
     isrc: string;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    previews: any[]; // Defina um tipo específico se a estrutura dos previews for conhecida
+    previews: any[];
 }
 
 
