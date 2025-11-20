@@ -78,16 +78,17 @@ export class DiscordIntegration implements PlayerIntegration {
         const artwork = getArtworkUrl(metadata)
         const artworkUrl = artwork.length <= 256 ? artwork : ''
         await this.client.user?.setActivity({
-            type: 2,
+            type: 2, // LISTENING
             details: metadata['name'],
-            state: `by ${metadata['artistName']}`,
+            detailsUrl: metadata['url'],
+            state: metadata['artistName'],
             largeImageKey: artworkUrl,
+            largeImageUrl: metadata['url'].split('?')[0],
             largeImageText: metadata['albumName'],
-            //smallImageKey: 'play',
-            //smallImageText: 'fweqfwefqw',
             startTimestamp: Date.now() - secToMillis(this.player.playbackTime),
             endTimestamp: Date.now() + (metadata.durationInMillis - secToMillis(this.player.playbackTime)),
-            instance: false
+            instance: false,
+            statusDisplayType: 1 // ACTIVITY_STATE
         })
     }
 

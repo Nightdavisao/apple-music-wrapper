@@ -37,6 +37,7 @@ export interface TrackMetadata {
     isrc: string;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     previews: any[];
+    url: string;
 }
 
 
