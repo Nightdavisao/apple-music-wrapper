@@ -80,10 +80,12 @@ export class DiscordIntegration implements PlayerIntegration {
         await this.client.user?.setActivity({
             type: 2, // LISTENING
             details: metadata['name'],
-            detailsUrl: metadata['url'],
+            ...(typeof metadata['url'] === 'string' ? {
+                detailsUrl: metadata['url'],
+                largeImageUrl: metadata['url'].split('?')[0]
+            } : {}),
             state: metadata['artistName'],
             largeImageKey: artworkUrl,
-            largeImageUrl: metadata['url'].split('?')[0],
             largeImageText: metadata['albumName'],
             startTimestamp: Date.now() - secToMillis(this.player.playbackTime),
             endTimestamp: Date.now() + (metadata.durationInMillis - secToMillis(this.player.playbackTime)),
