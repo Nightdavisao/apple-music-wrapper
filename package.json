@@ -4,7 +4,7 @@
   "description": "",
   "main": "dist/main.js",
   "scripts": {
-    "start": "npx tsc && NODE_ENV=dev ELECTRON_OZONE_PLATFORM_HINT=wayland electron .",
+    "start": "npx tsc && cross-env NODE_ENV=dev ELECTRON_OZONE_PLATFORM_HINT=wayland electron . --no-sandbox",
     "build": "npx tsc",
     "test": "echo \"Error: no test specified\" && exit 1",
     "app:dist": "npx tsc && electron-builder"
@@ -35,6 +35,7 @@
   "type": "commonjs",
   "devDependencies": {
     "@eslint/js": "^9.25.1",
+    "cross-env": "^10.1.0",
     "electron": "github:castlabs/electron-releases#v38.0.0-alpha.12+wvcus",
     "electron-builder": "^26.0.19",
     "eslint": "^9.33.0",

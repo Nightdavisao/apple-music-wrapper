@@ -3,11 +3,13 @@ import { PlayerIntegration, TrackMetadata } from '../@types/interfaces';
 import { LoopStatus, PlaybackStatus } from '../mpris/enums';
 import { MPRISService } from '../mpris/service';
 import { Player } from '../player';
-import { getArtworkUrl, microToSec, secToMicro } from '../utils';
+import { encodeBase64, getArtworkUrl, microToSec, secToMicro } from '../utils';
 import { Logger } from 'log4js';
 import log4js from 'log4js'
 
 export class MPRISIntegration implements PlayerIntegration {
+    shortName: string = "mpris";
+  
     logger: Logger
     player: Player
     mpris: MPRISService
@@ -44,17 +46,18 @@ export class MPRISIntegration implements PlayerIntegration {
             }
         })
 
-        this.player.on('nowPlaying', (metadata: TrackMetadata) => {
+        this.player.on('nowPlaying', async (metadata: TrackMetadata) => {
             if (Object.keys(metadata).length === 0) {
                 this.mpris.setMetadata({})
                 this.mpris.setPlaybackStatus(PlaybackStatus.Stopped)
                 return
-
             }
+            const artworkUrl = getArtworkUrl(metadata)
+            
             this.mpris.setMetadata({
                 'mpris:trackid': '/org/mpris/MediaPlayer2/Track/1',
                 'mpris:length': metadata.durationInMillis * 1000,
-                'mpris:artUrl': getArtworkUrl(metadata),
+                'mpris:artUrl': artworkUrl ? await encodeBase64(artworkUrl) : '',
                 'xesam:title': metadata.name,
                 'xesam:album': metadata.albumName,
                 'xesam:artist': [metadata.artistName],

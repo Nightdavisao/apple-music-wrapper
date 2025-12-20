@@ -6,7 +6,11 @@ import { secToMillis, getArtworkUrl } from "../utils"
 import { Logger } from "log4js"
 import log4js from "log4js"
 
+const INVISIBLE = '\u00A0';
+
 export class DiscordIntegration implements PlayerIntegration {
+    shortName: string = "discord"
+  
     logger: Logger
     player: Player
     client: Client
@@ -26,17 +30,17 @@ export class DiscordIntegration implements PlayerIntegration {
             this.logger.info('discord RPC ready')
         })
 
-        this.player.on('nowPlaying', (metadata: TrackMetadata) => this.setActivity(metadata))
-        this.player.on('playbackState', ({ state }) => {
+        this.player.on('nowPlaying', async (metadata: TrackMetadata) => await this.setActivity(metadata))
+        this.player.on('playbackState', async ({ state }) => {
             switch (state) {
                 case MKPlaybackState.Playing:
-                    if (this.player.metadata) this.setActivity(this.player.metadata)
+                    if (this.player.metadata) await this.setActivity(this.player.metadata)
                     break
                 case MKPlaybackState.Stopped:
                 case MKPlaybackState.Paused:
                 default:
                     this.wasPaused = true
-                    this.client.user?.clearActivity()
+                    await this.client.user?.clearActivity()
                     break
             }
         })
@@ -76,17 +80,17 @@ export class DiscordIntegration implements PlayerIntegration {
         this.logger.info('setting Discord activity')
 
         const artwork = getArtworkUrl(metadata)
-        const artworkUrl = artwork.length <= 256 ? artwork : ''
+        const artworkUrl = artwork && artwork.length <= 256 ? artwork : ''
         await this.client.user?.setActivity({
             type: 2, // LISTENING
-            details: metadata['name'],
+            details: metadata['name'].padEnd(2, INVISIBLE),
             ...(typeof metadata['url'] === 'string' ? {
                 detailsUrl: metadata['url'],
                 largeImageUrl: metadata['url'].split('?')[0]
             } : {}),
-            state: metadata['artistName'],
+            state: metadata['artistName'].padEnd(2, INVISIBLE),
             largeImageKey: artworkUrl,
-            largeImageText: metadata['albumName'],
+            largeImageText: metadata['albumName'].padEnd(2, INVISIBLE),
             startTimestamp: Date.now() - secToMillis(this.player.playbackTime),
             endTimestamp: Date.now() + (metadata.durationInMillis - secToMillis(this.player.playbackTime)),
             instance: false,

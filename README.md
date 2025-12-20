@@ -6,9 +6,9 @@ Unofficial, minimal Electron wrapper for Apple Music (and Apple Music Classical)
 
 ## ✨ Features
 
-* Linux **MPRIS** support (media keys, tray controls, position, artwork, shuffle / repeat, loop status)
-* **Discord Rich Presence** (current track, artwork, progress bar, pause / resume handling, reconnect logic)
-* **Last.fm scrobbling** (Now Playing + automatic scrobble logic w/ half track or 4‑minute rule, ignores <30s)
+* Linux **MPRIS** support
+* Discord Rich Presence 
+* Last.fm scrobbling
 * Switch between **Apple Music** and **Apple Music Classical**
 * Tray menu with quick playback + visibility controls
 
@@ -37,7 +37,7 @@ Artifacts will appear under `dist/` plus the packaged output directory created b
 
 ## Known Issues / Limitations
 
-* Radio stations currently break the app (needs safer handling of stream metadata).
+* Live radio stations currently break the app.
 * Only Linux builds provided right now.
 * No automatic updates.
 * No tests (yet).

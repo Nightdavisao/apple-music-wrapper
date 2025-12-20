@@ -65,7 +65,14 @@ export function getArtworkUrl(metadata: TrackMetadata) {
         }
         return metadata.artwork.url
     }
-    return ''
+    return null
+}
+
+export async function encodeBase64(url: string) {
+    const res = await fetch(url)
+    const contentType = res.headers.get("content-type") || "image/jpeg"
+    const base64 = Buffer.from(await res.arrayBuffer()).toString('base64')
+    return `data:${contentType};base64,${base64}`
 }
 
 export const secToMicro = (seconds: number) => Math.round(Number(seconds) * 1e6);

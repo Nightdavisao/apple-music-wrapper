@@ -1,4 +1,5 @@
 export interface PlayerIntegration {
+    shortName: string
     load(): Promise<void> | void
     unload(): Promise<void> | void
 }

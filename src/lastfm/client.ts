@@ -16,22 +16,46 @@ interface RequestBuilderRequest {
     urlParams: string
 }
 
+export enum LastFmApiErrorCode {
+    INVALID_SERVICE = 1,
+    INVALID_METHOD = 2,
+    INVALID_API_KEY = 3,
+    AUTHENTICATION_FAILED = 4,
+    INVALID_FORMAT = 5,
+    INVALID_PARAMETERS = 6,
+    INVALID_RESOURCE = 7,
+    OPERATION_FAILED = 8,
+    INVALID_SESSION_KEY = 9,
+    INVALID_API_SIGNATURE = 10,
+    SERVICE_OFFLINE = 11,
+    RATE_LIMIT_EXCEEDED = 16
+}
+
+export class LastFmClientError extends Error {
+    error: LastFmApiErrorCode
+    constructor(message: string, error: LastFmApiErrorCode) {
+        super(message)
+        this.name = "LastFmClientError"
+        this.error = error
+    }
+}
+
 export class LastFMClient {
     apiKey: string
     apiSecret: string
-    rootUrl: string
+    baseUrl: string
     
     constructor(apiKey: string, apiSecret: string) {
         this.apiKey = apiKey
         this.apiSecret = apiSecret
-        this.rootUrl = "http://ws.audioscrobbler.com/2.0/"
+        this.baseUrl = "http://ws.audioscrobbler.com/2.0/"
     }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     private validateLastFmResponse(response: { [key: string]: any }) {
         if (typeof response !== 'object') throw 'Response is not a JSON object'
 
-        if (response['error']) throw `message=(${response['message']}), error=(${response['error']})`
+        if (response['error']) throw new LastFmClientError(response["message"], response['error'])
 
         return response
     }
@@ -66,18 +90,21 @@ export class LastFMClient {
             isAuthenticatedCall,
             data: null
         })
+        
+        const response = await this.fetchRequest(builtRequest)
+        const json = await response.json()
 
-        return this.validateLastFmResponse((await this.fetchRequest(builtRequest)).json())
+        return this.validateLastFmResponse(json)
     }
 
     async fetchRequest(builtRequest: RequestBuilderRequest) {
         if (builtRequest.httpMethod === HTTPMethod.GET) {
-            return fetch(this.rootUrl + '?' + builtRequest.urlParams, {
+            return fetch(this.baseUrl + '?' + builtRequest.urlParams, {
                 method: builtRequest.httpMethod,
                 body: builtRequest.requestData
             })
         } else {
-            return fetch(this.rootUrl, {
+            return fetch(this.baseUrl, {
                 method: builtRequest.httpMethod,
                 body: builtRequest.urlParams
             })

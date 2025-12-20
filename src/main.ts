@@ -1,4 +1,4 @@
-import { app, shell, dialog, BrowserWindow, nativeTheme, components, Menu, ipcMain, MenuItem, Tray, MenuItemConstructorOptions, webContents } from 'electron';
+import { app, shell, dialog, BrowserWindow, components, Menu, ipcMain, MenuItem, Tray, MenuItemConstructorOptions, webContents } from 'electron';
 import path from 'path'
 import fs from 'fs'
 import { Player } from './player';
@@ -78,17 +78,19 @@ app.whenReady().then(async () => {
     }
 
     let isQuitting = false
-
+    
+    logger.info("awaiting components to be ready")
     await components.whenReady()
     const resourcesPath = process.env.NODE_ENV === 'dev' ?
         __dirname.split(path.sep).slice(0, -1).join(path.sep)
         : process.resourcesPath
 
-    mainWindow = new BrowserWindow({
+    const options = {
         icon: getIconFilenames(currentWebsite).trayPng,
         width: 800,
         height: 600,
         autoHideMenuBar: true,
+        backgroundColor: '#000000',
         frame: false,
         webPreferences: {
             preload: path.join(__dirname, 'preload.js'),
@@ -96,21 +98,33 @@ app.whenReady().then(async () => {
             plugins: true,
             webviewTag: true
         },
-        darkTheme: true,
-        show: false
-    });
-    nativeTheme.themeSource = 'dark'
+        //darkTheme: true,
+        //show: false
+    }
+    Object.assign(options, configHelper.get('winBounds'))
+    mainWindow = new BrowserWindow(options);
+    
+    // nativeTheme.themeSource = 'dark'
     mainWindow.setTitle(DEFAULT_TITLE)
 
     function loadLastFmIntegration(player: Player) {
         if (!configHelper.get('enableLastFm')) return
+        
+        const lastFmSession = configHelper.get('lastFmSession')
 
-        const lastFmSession = configHelper.get('lastFmSession')['token']
-
-        if (lastFmSession) {
-            const lastFmIntegration = new LastFMIntegration(player, currentWebsite, lastFmClient, lastFmSession)
-            player.addIntegration(lastFmIntegration)
-            return lastFmIntegration
+        if (typeof lastFmSession === 'object' && Object.prototype.hasOwnProperty.call(lastFmSession, "token")) {
+            const token = lastFmSession['token']
+          
+            if (!player.hasIntegration("lastfm")) {
+                const newInstance = new LastFMIntegration(player, currentWebsite, lastFmClient)
+                newInstance.setSession(token)
+                player.addIntegration(newInstance)
+                return
+            }
+            
+            const instance = player.getIntegration<LastFMIntegration>("lastfm")
+            instance.setSession(token)
+            player.enableIntegration("lastfm")
         } else {
             logger.debug('last.fm: tried to load lastfm integration, but the saved session is invalid')
         }
@@ -432,6 +446,7 @@ app.whenReady().then(async () => {
             buildTrayMenu(player)
             return false
         } else {
+            configHelper.set('winBounds', mainWindow.getBounds())
             mainWindow.destroy()
             return true
         }
@@ -484,7 +499,7 @@ app.whenReady().then(async () => {
         }
     })
 
-    mainWindow.on('ready-to-show', () => mainWindow.show())
+    //mainWindow.on('ready-to-show', () => mainWindow.show())
 
     try {
         if (!configHelper.get('storefrontId')) {
@@ -506,6 +521,7 @@ app.whenReady().then(async () => {
 
     const guessedGeo = configHelper.get('storefrontId')
     const currentWebsiteURL = configHelper.get('currentWebsite') === "music" ? AM_BASE_URL : AM_CLASSICAL_BASE_URL
+    logger.debug(`current geolocation: ${guessedGeo}, current website: ${currentWebsiteURL}`)
 
     let amUrl = currentWebsiteURL
     if (guessedGeo && typeof guessedGeo === 'string') {
@@ -522,6 +538,7 @@ app.whenReady().then(async () => {
     })
 
     ipcMain.once('webview-ready', (_event, id: number) => {
+        logger.debug("webview is ready")
         amWebContents = webContents.fromId(id)!
 
         player = new Player(ipcMain, amWebContents)
@@ -601,7 +618,18 @@ app.whenReady().then(async () => {
             }
             buildMenus(player, lastFmIntegration)
         })
-
+        
+        player.on('lfm:invalidsession', async () => {
+            if (lastFmIntegration) {
+                logger.info("disabling last.fm integration and removing session")
+                configHelper.delete('lastFmSession')
+                player.disableIntegration("lastfm")
+            }
+            await dialog.showMessageBox({
+                title: "Invalid Last.fm session",
+                message: "Your Last.fm session is expired, please log in again through the menus."
+            })
+        })
         player.on('lfm:scrobble', () => buildMenus(player, lastFmIntegration))
         player.on('shuffle', () => buildMenus(player, lastFmIntegration))
         player.on('repeat', () => buildMenus(player, lastFmIntegration))
